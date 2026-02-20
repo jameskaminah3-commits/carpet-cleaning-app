@@ -17,11 +17,7 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
-      <Route path="/book">
-        <ProtectedRoute allowedRoles={["customer", "admin"]}>
-          <BookingPage />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/book" component={BookingPage} />
       <Route path="/customer">
         <ProtectedRoute allowedRoles={["customer"]}>
           <CustomerDashboard />
