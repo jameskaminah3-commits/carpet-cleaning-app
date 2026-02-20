@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { randomUUID, randomInt } from "crypto";
 import { loginSchema, verifyOtpSchema } from "@shared/schema";
 
+const paramId = (req: Request) => req.params.id as string;
+
 declare module "express-serve-static-core" {
   interface Request {
     userId?: string;
@@ -72,6 +74,10 @@ export async function registerRoutes(
         });
       }
 
+      if (!user.isActive) {
+        return res.status(403).json({ message: "Account has been deactivated. Contact support." });
+      }
+
       const otp = String(randomInt(100000, 999999));
       const expiry = new Date(Date.now() + 10 * 60 * 1000);
       await storage.updateUserOtp(user.id, otp, expiry);
@@ -111,7 +117,7 @@ export async function registerRoutes(
       await storage.createSession(user.id, token, expiresAt);
 
       res.setHeader("Set-Cookie", `session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`);
-      res.json({ success: true, user: { id: user.id, name: user.name, role: user.role, phone: user.phone } });
+      res.json({ success: true, user: { id: user.id, name: user.name, role: user.role, phone: user.phone, email: user.email, tag: user.tag } });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -120,7 +126,25 @@ export async function registerRoutes(
   app.get("/api/auth/me", authMiddleware, async (req, res) => {
     const user = await storage.getUser(req.userId!);
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({ id: user.id, name: user.name, role: user.role, phone: user.phone, email: user.email });
+    res.json({
+      id: user.id, name: user.name, role: user.role, phone: user.phone, email: user.email,
+      tag: user.tag, lifetimeValue: user.lifetimeValue, totalOrders: user.totalOrders,
+      profilePhoto: user.profilePhoto, isActive: user.isActive,
+    });
+  });
+
+  app.patch("/api/auth/profile", authMiddleware, async (req, res) => {
+    try {
+      const { name, email } = req.body;
+      if (!name && !email) return res.status(400).json({ message: "Provide name or email to update" });
+      const updates: any = {};
+      if (name) updates.name = name;
+      if (email) updates.email = email;
+      const user = await storage.updateUserProfile(req.userId!, updates);
+      res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone, tag: user.tag });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
   });
 
   app.post("/api/auth/logout", authMiddleware, async (req, res) => {
@@ -145,7 +169,7 @@ export async function registerRoutes(
 
   app.post("/api/orders", authMiddleware, async (req, res) => {
     try {
-      const { items, deliveryZoneId, pickupAddress, locationName, notes, totalAmount } = req.body;
+      const { items, deliveryZoneId, pickupAddress, locationName, notes, totalAmount, promotionId, discountAmount, pickupFee, deliveryFee, expressFee } = req.body;
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "At least one carpet item is required" });
@@ -156,6 +180,8 @@ export async function registerRoutes(
           return res.status(400).json({ message: "Each carpet item must have valid type, width, and length" });
         }
       }
+
+      const pricingRulesSnapshot = await storage.getPricingRules();
 
       const order = await storage.createOrder({
         customerId: req.userId!,
@@ -171,21 +197,25 @@ export async function registerRoutes(
         locationLat: null,
         locationLng: null,
         technicianId: null,
+        pricingSnapshot: { rules: pricingRulesSnapshot, timestamp: new Date().toISOString() },
+        promotionId: promotionId || null,
+        discountAmount: String(discountAmount || 0),
+        pickupFee: String(pickupFee || 0),
+        deliveryFee: String(deliveryFee || 0),
+        expressFee: String(expressFee || 0),
       });
 
-      if (items && Array.isArray(items)) {
-        for (const item of items) {
-          await storage.createOrderItem({
-            orderId: order.id,
-            carpetType: item.carpetType,
-            width: String(item.width),
-            length: String(item.length),
-            quantity: item.quantity || 1,
-            unitPrice: String(item.unitPrice),
-            subtotal: String(item.subtotal),
-            description: item.description || null,
-          });
-        }
+      for (const item of items) {
+        await storage.createOrderItem({
+          orderId: order.id,
+          carpetType: item.carpetType,
+          width: String(item.width),
+          length: String(item.length),
+          quantity: item.quantity || 1,
+          unitPrice: String(item.unitPrice),
+          subtotal: String(item.subtotal),
+          description: item.description || null,
+        });
       }
 
       res.json(order);
@@ -195,12 +225,17 @@ export async function registerRoutes(
   });
 
   app.get("/api/orders/my", authMiddleware, async (req, res) => {
-    const orders = await storage.getOrdersByCustomer(req.userId!);
-    res.json(orders);
+    const myOrders = await storage.getOrdersByCustomer(req.userId!);
+    const result = [];
+    for (const order of myOrders) {
+      const items = await storage.getOrderItems(order.id);
+      result.push({ ...order, items });
+    }
+    res.json(result);
   });
 
   app.get("/api/orders/:id", authMiddleware, async (req, res) => {
-    const order = await storage.getOrder(req.params.id);
+    const order = await storage.getOrder(paramId(req));
     if (!order) return res.status(404).json({ message: "Order not found" });
     const user = await storage.getUser(req.userId!);
     if (!user) return res.status(401).json({ message: "User not found" });
@@ -211,9 +246,53 @@ export async function registerRoutes(
     res.json({ ...order, items });
   });
 
+  app.get("/api/saved-addresses", authMiddleware, async (req, res) => {
+    const addresses = await storage.getSavedAddresses(req.userId!);
+    res.json(addresses);
+  });
+
+  app.post("/api/saved-addresses", authMiddleware, async (req, res) => {
+    try {
+      const { label, address } = req.body;
+      if (!label || !address) return res.status(400).json({ message: "Label and address are required" });
+      const saved = await storage.createSavedAddress({ userId: req.userId!, label, address, isDefault: false });
+      res.json(saved);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/saved-addresses/:id", authMiddleware, async (req, res) => {
+    await storage.deleteSavedAddress(paramId(req));
+    res.json({ success: true });
+  });
+
+  app.get("/api/promotions/my", authMiddleware, async (req, res) => {
+    const promos = await storage.getPromotionsForUser(req.userId!);
+    res.json(promos);
+  });
+
+  app.post("/api/promotions/validate", authMiddleware, async (req, res) => {
+    try {
+      const { code } = req.body;
+      if (!code) return res.status(400).json({ message: "Coupon code required" });
+      const promo = await storage.getPromotionByCode(code);
+      if (!promo || !promo.isActive) return res.status(404).json({ message: "Invalid or expired coupon" });
+      if (promo.expiresAt && new Date() > promo.expiresAt) return res.status(400).json({ message: "Coupon expired" });
+      if (promo.isVipOnly) {
+        const user = await storage.getUser(req.userId!);
+        if (!user || user.tag !== "VIP") return res.status(403).json({ message: "This coupon is for VIP customers only" });
+      }
+      res.json(promo);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Admin routes
   app.get("/api/admin/orders", authMiddleware, adminMiddleware, async (_req, res) => {
-    const orders = await storage.getAllOrders();
-    res.json(orders);
+    const allOrders = await storage.getAllOrders();
+    res.json(allOrders);
   });
 
   app.get("/api/admin/stats", authMiddleware, adminMiddleware, async (_req, res) => {
@@ -227,9 +306,9 @@ export async function registerRoutes(
       if (!req.body.status || !validStatuses.includes(req.body.status)) {
         return res.status(400).json({ message: "Invalid status value" });
       }
-      const order = await storage.getOrder(req.params.id);
+      const order = await storage.getOrder(paramId(req));
       if (!order) return res.status(404).json({ message: "Order not found" });
-      await storage.updateOrderStatus(req.params.id, req.body.status);
+      await storage.updateOrderStatus(paramId(req), req.body.status);
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -241,9 +320,9 @@ export async function registerRoutes(
       if (typeof req.body.isLocked !== "boolean") {
         return res.status(400).json({ message: "isLocked must be a boolean" });
       }
-      const order = await storage.getOrder(req.params.id);
+      const order = await storage.getOrder(paramId(req));
       if (!order) return res.status(404).json({ message: "Order not found" });
-      await storage.updateOrderLock(req.params.id, req.body.isLocked);
+      await storage.updateOrderLock(paramId(req), req.body.isLocked);
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -256,9 +335,9 @@ export async function registerRoutes(
       if (isNaN(amount) || amount < 0) {
         return res.status(400).json({ message: "totalAmount must be a valid positive number" });
       }
-      const order = await storage.getOrder(req.params.id);
+      const order = await storage.getOrder(paramId(req));
       if (!order) return res.status(404).json({ message: "Order not found" });
-      await storage.updateOrderPrice(req.params.id, String(amount));
+      await storage.updateOrderPrice(paramId(req), String(amount));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -279,12 +358,8 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/pricing/:id", authMiddleware, adminMiddleware, async (req, res) => {
-    try {
-      await storage.deletePricingRule(req.params.id);
-      res.json({ success: true });
-    } catch (err: any) {
-      res.status(500).json({ message: err.message });
-    }
+    await storage.deletePricingRule(paramId(req));
+    res.json({ success: true });
   });
 
   app.post("/api/admin/delivery-zones", authMiddleware, adminMiddleware, async (req, res) => {
@@ -301,14 +376,138 @@ export async function registerRoutes(
   });
 
   app.delete("/api/admin/delivery-zones/:id", authMiddleware, adminMiddleware, async (req, res) => {
+    await storage.deleteDeliveryZone(paramId(req));
+    res.json({ success: true });
+  });
+
+  // Admin - Users management
+  app.get("/api/admin/users", authMiddleware, adminMiddleware, async (_req, res) => {
+    const customers = await storage.getAllCustomers();
+    res.json(customers);
+  });
+
+  app.patch("/api/admin/users/:id/tag", authMiddleware, adminMiddleware, async (req, res) => {
     try {
-      await storage.deleteDeliveryZone(req.params.id);
+      const validTags = ["VIP", "Frequent", "Corporate", "One-time", null];
+      if (!validTags.includes(req.body.tag)) {
+        return res.status(400).json({ message: "Invalid tag" });
+      }
+      await storage.updateUserTag(paramId(req), req.body.tag);
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
   });
 
+  app.patch("/api/admin/users/:id/active", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      if (typeof req.body.isActive !== "boolean") {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+      await storage.updateUserActive(paramId(req), req.body.isActive);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Admin - Deliveries management
+  app.get("/api/admin/deliveries", authMiddleware, adminMiddleware, async (_req, res) => {
+    const allDeliveries = await storage.getDeliveries();
+    res.json(allDeliveries);
+  });
+
+  app.post("/api/admin/deliveries", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const { orderId, technicianId, deliveryType, scheduledDate, scheduledTimeWindow } = req.body;
+      if (!orderId || !deliveryType) return res.status(400).json({ message: "Order and delivery type required" });
+      const delivery = await storage.createDelivery({
+        orderId,
+        technicianId: technicianId || null,
+        deliveryType,
+        status: "scheduled",
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+        scheduledTimeWindow: scheduledTimeWindow || null,
+        completedAt: null,
+        failureReason: null,
+        notes: req.body.notes || null,
+      });
+      res.json(delivery);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/deliveries/:id/status", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const validStatuses = ["scheduled", "in_transit", "completed", "failed"];
+      if (!req.body.status || !validStatuses.includes(req.body.status)) {
+        return res.status(400).json({ message: "Invalid delivery status" });
+      }
+      await storage.updateDeliveryStatus(paramId(req), req.body.status);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/deliveries/:id/assign", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      if (!req.body.technicianId) return res.status(400).json({ message: "Technician ID required" });
+      await storage.updateDeliveryTechnician(paramId(req), req.body.technicianId);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/deliveries/:id/reschedule", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const { scheduledDate, scheduledTimeWindow } = req.body;
+      if (!scheduledDate || !scheduledTimeWindow) return res.status(400).json({ message: "Date and time window required" });
+      await storage.rescheduleDelivery(paramId(req), new Date(scheduledDate), scheduledTimeWindow);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Admin - Promotions management
+  app.get("/api/admin/promotions", authMiddleware, adminMiddleware, async (_req, res) => {
+    const promos = await storage.getPromotions();
+    res.json(promos);
+  });
+
+  app.post("/api/admin/promotions", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const { name, promoType, appliesTo } = req.body;
+      if (!name || !promoType) return res.status(400).json({ message: "Name and promo type required" });
+      const promo = await storage.createPromotion({
+        name,
+        description: req.body.description || null,
+        promoType,
+        appliesTo: appliesTo || "order",
+        discountValue: req.body.discountValue || null,
+        couponCode: req.body.couponCode || null,
+        isVipOnly: req.body.isVipOnly || false,
+        isSingleUse: req.body.isSingleUse || false,
+        isActive: true,
+        freePickupThreshold: req.body.freePickupThreshold || null,
+        expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
+        targetUserId: req.body.targetUserId || null,
+      });
+      res.json(promo);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/promotions/:id", authMiddleware, adminMiddleware, async (req, res) => {
+    await storage.deletePromotion(paramId(req));
+    res.json({ success: true });
+  });
+
+  // Technician routes
   app.get("/api/technician/tasks", authMiddleware, techMiddleware, async (req, res) => {
     const tasks = await storage.getOrdersByTechnician(req.userId!);
     const unassigned = await storage.getUnassignedOrders();
@@ -317,7 +516,7 @@ export async function registerRoutes(
 
   app.patch("/api/technician/tasks/:id/complete", authMiddleware, techMiddleware, async (req, res) => {
     try {
-      const order = await storage.getOrder(req.params.id);
+      const order = await storage.getOrder(paramId(req));
       if (!order) return res.status(404).json({ message: "Order not found" });
 
       if (order.technicianId && order.technicianId !== req.userId) {
@@ -328,7 +527,7 @@ export async function registerRoutes(
         await storage.assignTechnician(order.id, req.userId!);
       }
 
-      await storage.updateOrderStatus(req.params.id, "COMPLETED");
+      await storage.updateOrderStatus(paramId(req), "COMPLETED");
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });

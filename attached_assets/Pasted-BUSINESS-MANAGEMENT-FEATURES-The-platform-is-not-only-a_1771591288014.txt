@@ -1,0 +1,112 @@
+BUSINESS MANAGEMENT FEATURES
+
+The platform is not only a booking tool but a full customer and logistics management system.
+
+ADMIN — USER MANAGEMENT
+
+Admin must have a Users panel with capabilities:
+
+• View all customers
+• View total orders & total spend per customer
+• View last order date
+• Manually deactivate or reactivate customer accounts
+• Assign VIP status to a customer
+• Send manual promotion to specific customers
+
+Each user record must store:
+
+profile details
+
+order history summary
+
+lifetime value
+
+tags (VIP, Frequent, Corporate, One-time)
+
+ADMIN — DELIVERY MANAGEMENT
+
+Admin can manage deliveries separately from orders.
+
+Create a Deliveries entity:
+
+A delivery represents a pickup or drop-off trip.
+
+Each delivery contains:
+
+assigned technician
+
+scheduled time window
+
+delivery type (pickup / return)
+
+route status
+
+completion timestamp
+
+Orders can generate multiple deliveries.
+
+Admin can:
+• assign technician
+• reschedule delivery
+• group nearby deliveries into route batches
+• mark failed attempt
+
+ADMIN — PRICING & PROMOTIONS ENGINE
+
+The pricing system must support layered pricing:
+
+Base cleaning price
+Carpet type multiplier
+Size calculation
+Pickup fee
+Delivery fee
+Express service fee
+Promotional discount
+
+Admin can:
+
+• Set standard pickup & return fees
+• Configure promotional delivery price
+• Create coupon codes
+• Create automatic discounts (e.g repeat customer)
+• Enable free pickup above threshold value
+
+Pricing must be calculated on server using pricing rules table.
+
+CUSTOMER ACCOUNT FEATURES
+
+Customers have a profile dashboard.
+
+They can:
+
+• Edit personal details
+• View order history
+• Reorder from previous order
+• See applied discounts
+• Receive personal promotions
+• View loyalty status (VIP/Frequent)
+
+Personal promotions are targeted and stored per user.
+
+PROMOTION SYSTEM
+
+Create Promotions entity supporting:
+
+percentage discount
+fixed discount
+free pickup
+free delivery
+VIP only
+single-use or reusable
+expiry date
+
+Promotion can apply to:
+order OR delivery OR entire invoice
+
+ORDER HISTORY REQUIREMENT
+
+Each order must store:
+
+snapshot of prices used at time of booking
+
+Future price changes must not alter past invoices.

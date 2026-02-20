@@ -1,7 +1,8 @@
 import { db } from "./db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, isNull, ne } from "drizzle-orm";
 import {
-  users, sessions, orders, orderItems, orderPhotos, pricingRules, deliveryZones, mediaLibrary,
+  users, sessions, orders, orderItems, orderPhotos, pricingRules, deliveryZones,
+  mediaLibrary, deliveries, promotions, savedAddresses,
   type User, type InsertUser,
   type PricingRule, type InsertPricingRule,
   type DeliveryZone, type InsertDeliveryZone,
@@ -9,8 +10,10 @@ import {
   type OrderItem, type InsertOrderItem,
   type OrderPhoto, type InsertOrderPhoto,
   type Media, type InsertMedia,
+  type Delivery, type InsertDelivery,
+  type Promotion, type InsertPromotion,
+  type SavedAddress, type InsertSavedAddress,
 } from "@shared/schema";
-import { randomUUID } from "crypto";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -18,6 +21,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserOtp(id: string, otp: string, expiry: Date): Promise<void>;
   clearUserOtp(id: string): Promise<void>;
+  updateUserProfile(id: string, data: Partial<{ name: string; email: string; phone: string }>): Promise<User>;
+  updateUserTag(id: string, tag: string | null): Promise<void>;
+  updateUserActive(id: string, isActive: boolean): Promise<void>;
+  getAllCustomers(): Promise<User[]>;
 
   createSession(userId: string, token: string, expiresAt: Date): Promise<string>;
   getSessionByToken(token: string): Promise<{ userId: string } | undefined>;
@@ -45,7 +52,28 @@ export interface IStorage {
   createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
   getOrderItems(orderId: string): Promise<OrderItem[]>;
 
-  getStats(): Promise<{ total: number; pending: number; inProgress: number; completed: number; revenue: number }>;
+  getDeliveries(): Promise<(Delivery & { order?: Order; technician?: User })[]>;
+  getDeliveriesByOrder(orderId: string): Promise<Delivery[]>;
+  createDelivery(delivery: InsertDelivery): Promise<Delivery>;
+  updateDeliveryStatus(id: string, status: string): Promise<void>;
+  updateDeliveryTechnician(id: string, technicianId: string): Promise<void>;
+  rescheduleDelivery(id: string, date: Date, timeWindow: string): Promise<void>;
+
+  getPromotions(): Promise<Promotion[]>;
+  getActivePromotions(): Promise<Promotion[]>;
+  getPromotionsForUser(userId: string): Promise<Promotion[]>;
+  createPromotion(promo: InsertPromotion): Promise<Promotion>;
+  deletePromotion(id: string): Promise<void>;
+  getPromotionByCode(code: string): Promise<Promotion | undefined>;
+
+  getSavedAddresses(userId: string): Promise<SavedAddress[]>;
+  createSavedAddress(address: InsertSavedAddress): Promise<SavedAddress>;
+  deleteSavedAddress(id: string): Promise<void>;
+
+  getStats(): Promise<{
+    totalUsers: number; totalOrders: number; scheduledDeliveries: number; activePromotions: number;
+    total: number; pending: number; inProgress: number; completed: number; revenue: number;
+  }>;
 
   seedData(): Promise<void>;
 }
@@ -72,6 +100,23 @@ export class DatabaseStorage implements IStorage {
 
   async clearUserOtp(id: string): Promise<void> {
     await db.update(users).set({ otpCode: null, otpExpiry: null }).where(eq(users.id, id));
+  }
+
+  async updateUserProfile(id: string, data: Partial<{ name: string; email: string; phone: string }>): Promise<User> {
+    const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    return updated;
+  }
+
+  async updateUserTag(id: string, tag: string | null): Promise<void> {
+    await db.update(users).set({ tag: tag as any }).where(eq(users.id, id));
+  }
+
+  async updateUserActive(id: string, isActive: boolean): Promise<void> {
+    await db.update(users).set({ isActive }).where(eq(users.id, id));
+  }
+
+  async getAllCustomers(): Promise<User[]> {
+    return db.select().from(users).where(eq(users.role, "customer")).orderBy(desc(users.createdAt));
   }
 
   async createSession(userId: string, token: string, expiresAt: Date): Promise<string> {
@@ -121,6 +166,11 @@ export class DatabaseStorage implements IStorage {
 
   async createOrder(order: Omit<InsertOrder, "createdAt" | "updatedAt">): Promise<Order> {
     const [created] = await db.insert(orders).values(order).returning();
+    await db.update(users).set({
+      totalOrders: sql`${users.totalOrders} + 1`,
+      lastOrderDate: new Date(),
+      lifetimeValue: sql`${users.lifetimeValue} + ${parseFloat(String(order.totalAmount || "0"))}`,
+    }).where(eq(users.id, order.customerId));
     return created;
   }
 
@@ -196,14 +246,107 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
   }
 
-  async getStats(): Promise<{ total: number; pending: number; inProgress: number; completed: number; revenue: number }> {
+  async getDeliveries(): Promise<(Delivery & { order?: Order; technician?: User })[]> {
+    const allDeliveries = await db.select().from(deliveries).orderBy(desc(deliveries.createdAt));
+    const result: (Delivery & { order?: Order; technician?: User })[] = [];
+    for (const delivery of allDeliveries) {
+      const [order] = await db.select().from(orders).where(eq(orders.id, delivery.orderId));
+      let technician: User | undefined;
+      if (delivery.technicianId) {
+        const [tech] = await db.select().from(users).where(eq(users.id, delivery.technicianId));
+        technician = tech;
+      }
+      result.push({ ...delivery, order, technician });
+    }
+    return result;
+  }
+
+  async getDeliveriesByOrder(orderId: string): Promise<Delivery[]> {
+    return db.select().from(deliveries).where(eq(deliveries.orderId, orderId));
+  }
+
+  async createDelivery(delivery: InsertDelivery): Promise<Delivery> {
+    const [created] = await db.insert(deliveries).values(delivery).returning();
+    return created;
+  }
+
+  async updateDeliveryStatus(id: string, status: string): Promise<void> {
+    const updates: any = { status };
+    if (status === "completed") updates.completedAt = new Date();
+    await db.update(deliveries).set(updates).where(eq(deliveries.id, id));
+  }
+
+  async updateDeliveryTechnician(id: string, technicianId: string): Promise<void> {
+    await db.update(deliveries).set({ technicianId }).where(eq(deliveries.id, id));
+  }
+
+  async rescheduleDelivery(id: string, date: Date, timeWindow: string): Promise<void> {
+    await db.update(deliveries).set({ scheduledDate: date, scheduledTimeWindow: timeWindow }).where(eq(deliveries.id, id));
+  }
+
+  async getPromotions(): Promise<Promotion[]> {
+    return db.select().from(promotions).orderBy(desc(promotions.createdAt));
+  }
+
+  async getActivePromotions(): Promise<Promotion[]> {
+    return db.select().from(promotions).where(eq(promotions.isActive, true));
+  }
+
+  async getPromotionsForUser(userId: string): Promise<Promotion[]> {
+    const all = await db.select().from(promotions).where(eq(promotions.isActive, true));
+    return all.filter(p => {
+      if (p.expiresAt && new Date() > p.expiresAt) return false;
+      if (p.targetUserId && p.targetUserId !== userId) return false;
+      return true;
+    });
+  }
+
+  async createPromotion(promo: InsertPromotion): Promise<Promotion> {
+    const [created] = await db.insert(promotions).values(promo).returning();
+    return created;
+  }
+
+  async deletePromotion(id: string): Promise<void> {
+    await db.delete(promotions).where(eq(promotions.id, id));
+  }
+
+  async getPromotionByCode(code: string): Promise<Promotion | undefined> {
+    const [promo] = await db.select().from(promotions).where(eq(promotions.couponCode, code));
+    return promo;
+  }
+
+  async getSavedAddresses(userId: string): Promise<SavedAddress[]> {
+    return db.select().from(savedAddresses).where(eq(savedAddresses.userId, userId));
+  }
+
+  async createSavedAddress(address: InsertSavedAddress): Promise<SavedAddress> {
+    const [created] = await db.insert(savedAddresses).values(address).returning();
+    return created;
+  }
+
+  async deleteSavedAddress(id: string): Promise<void> {
+    await db.delete(savedAddresses).where(eq(savedAddresses.id, id));
+  }
+
+  async getStats() {
     const allOrders = await db.select().from(orders);
+    const allUsers = await db.select().from(users).where(eq(users.role, "customer"));
+    const allDeliveries = await db.select().from(deliveries).where(eq(deliveries.status, "scheduled"));
+    const activePromos = await db.select().from(promotions).where(eq(promotions.isActive, true));
+
     const total = allOrders.length;
     const pending = allOrders.filter((o) => o.status === "PENDING").length;
     const completed = allOrders.filter((o) => o.status === "COMPLETED").length;
     const inProgress = allOrders.filter((o) => !["PENDING", "COMPLETED"].includes(o.status)).length;
     const revenue = allOrders.filter((o) => o.status === "COMPLETED").reduce((sum, o) => sum + parseFloat(o.totalAmount), 0);
-    return { total, pending, inProgress, completed, revenue };
+
+    return {
+      totalUsers: allUsers.length,
+      totalOrders: total,
+      scheduledDeliveries: allDeliveries.length,
+      activePromotions: activePromos.length,
+      total, pending, inProgress, completed, revenue,
+    };
   }
 
   async seedData(): Promise<void> {
@@ -243,47 +386,152 @@ export class DatabaseStorage implements IStorage {
       email: "john@carpetpro.co.ke",
     }).returning();
 
-    const [customer] = await db.insert(users).values({
+    const [customer1] = await db.insert(users).values({
       phone: "+254712345678",
-      name: "Sarah Muthoni",
+      name: "Sarah Wanjiku",
       role: "customer",
       email: "sarah@example.com",
+      tag: "Frequent",
+      totalOrders: 5,
+      lifetimeValue: "43500",
+    }).returning();
+
+    const [customer2] = await db.insert(users).values({
+      phone: "+254791234567",
+      name: "Mark Ndungu",
+      role: "customer",
+      email: "mark@example.com",
+      tag: "Frequent",
+      totalOrders: 1,
+      lifetimeValue: "6500",
+    }).returning();
+
+    const [customer3] = await db.insert(users).values({
+      phone: "+254791234568",
+      name: "John Mwangi",
+      role: "customer",
+      email: "john.m@example.com",
+      tag: "Corporate",
+      totalOrders: 2,
+      lifetimeValue: "6500",
     }).returning();
 
     const zones = await db.select().from(deliveryZones);
     const westlands = zones.find((z) => z.name === "Westlands");
 
     const [order1] = await db.insert(orders).values({
-      customerId: customer.id,
+      customerId: customer1.id,
       technicianId: tech.id,
+      status: "COMPLETED",
+      totalAmount: "9000",
+      depositPaid: "9000",
+      balanceDue: "0",
+      isLocked: true,
+      deliveryZoneId: westlands?.id,
+      pickupAddress: "Brookside Apartments, Apt 4B",
+      locationName: "Westlands, Nairobi",
+      notes: "Office carpets - 2 pieces",
+      pricingSnapshot: { rules: [{ carpetType: "Persian/Oriental", pricePerSqMeter: 800 }], pickupFee: 500, deliveryFee: 500 },
+    }).returning();
+
+    await db.insert(orderItems).values([
+      { orderId: order1.id, carpetType: "Persian/Oriental", width: "3", length: "2", quantity: 2, unitPrice: "800", subtotal: "9600", description: "Office Carpets, 2 pcs. - 120 sqft" },
+    ]);
+
+    const [order2] = await db.insert(orders).values({
+      customerId: customer1.id,
       status: "IN_CLEANING",
       totalAmount: "4800",
       depositPaid: "2400",
       balanceDue: "2400",
       isLocked: true,
-      deliveryZoneId: westlands?.id,
-      pickupAddress: "Brookside Apartments, Apt 4B",
-      locationName: "Westlands, Nairobi",
-      notes: "Please handle with care - antique rug",
-    }).returning();
-
-    await db.insert(orderItems).values([
-      { orderId: order1.id, carpetType: "Persian/Oriental", width: "3", length: "2", quantity: 1, unitPrice: "800", subtotal: "4800", description: "Antique Persian rug" },
-    ]);
-
-    const [order2] = await db.insert(orders).values({
-      customerId: customer.id,
-      status: "PENDING",
-      totalAmount: "2700",
-      depositPaid: "0",
-      balanceDue: "2700",
-      isLocked: false,
+      technicianId: tech.id,
       pickupAddress: "Riverside Drive, House 12",
       locationName: "Kilimani, Nairobi",
     }).returning();
 
     await db.insert(orderItems).values([
       { orderId: order2.id, carpetType: "Shag", width: "2.5", length: "1.8", quantity: 1, unitPrice: "600", subtotal: "2700", description: "Living room shag carpet" },
+    ]);
+
+    const [order3] = await db.insert(orders).values({
+      customerId: customer2.id,
+      status: "AWAITING_PICKUP",
+      totalAmount: "6500",
+      depositPaid: "3000",
+      balanceDue: "3500",
+      isLocked: false,
+      technicianId: tech.id,
+      pickupAddress: "Ngong Road, Building 5",
+      locationName: "Lavington, Nairobi",
+    }).returning();
+
+    await db.insert(orderItems).values([
+      { orderId: order3.id, carpetType: "Silk", width: "4", length: "3", quantity: 1, unitPrice: "1200", subtotal: "6500", description: "Silk carpet premium clean" },
+    ]);
+
+    await db.insert(deliveries).values([
+      {
+        orderId: order1.id,
+        technicianId: tech.id,
+        deliveryType: "pickup",
+        status: "completed",
+        scheduledDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        scheduledTimeWindow: "9:00 AM - 12:00 PM",
+        completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      },
+      {
+        orderId: order1.id,
+        technicianId: tech.id,
+        deliveryType: "return",
+        status: "completed",
+        scheduledDate: new Date(),
+        scheduledTimeWindow: "2:00 PM - 5:00 PM",
+        completedAt: new Date(),
+      },
+      {
+        orderId: order3.id,
+        technicianId: tech.id,
+        deliveryType: "pickup",
+        status: "scheduled",
+        scheduledDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+        scheduledTimeWindow: "9:00 AM - 12:00 PM",
+      },
+    ]);
+
+    await db.insert(promotions).values([
+      {
+        name: "Frequent Discount",
+        description: "10% Off for repeat clients",
+        promoType: "percentage",
+        appliesTo: "order",
+        discountValue: "10",
+        isActive: true,
+        expiresAt: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
+      },
+      {
+        name: "Free Pickup",
+        description: "Save KES 1000 on pickup",
+        promoType: "free_pickup",
+        appliesTo: "delivery",
+        isActive: true,
+        freePickupThreshold: "5000",
+        expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      },
+      {
+        name: "VIP Welcome",
+        description: "20% off for VIP customers",
+        promoType: "percentage",
+        appliesTo: "order",
+        discountValue: "20",
+        isVipOnly: true,
+        isActive: true,
+      },
+    ]);
+
+    await db.insert(savedAddresses).values([
+      { userId: customer1.id, label: "Home", address: "Brookside Apartments, Apt 4B, Westlands", isDefault: true },
+      { userId: customer1.id, label: "Office", address: "ABC Tower, 5th Floor, Nairobi CBD" },
     ]);
   }
 }

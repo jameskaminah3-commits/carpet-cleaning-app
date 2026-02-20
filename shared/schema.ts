@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -14,6 +14,12 @@ export const orderStatusEnum = pgEnum("order_status", [
   "COMPLETED",
 ]);
 
+export const deliveryTypeEnum = pgEnum("delivery_type", ["pickup", "return"]);
+export const deliveryStatusEnum = pgEnum("delivery_status", ["scheduled", "in_transit", "completed", "failed"]);
+export const promoTypeEnum = pgEnum("promo_type", ["percentage", "fixed", "free_pickup", "free_delivery"]);
+export const promoAppliesEnum = pgEnum("promo_applies", ["order", "delivery", "invoice"]);
+export const customerTagEnum = pgEnum("customer_tag", ["VIP", "Frequent", "Corporate", "One-time"]);
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   phone: text("phone").notNull().unique(),
@@ -22,6 +28,13 @@ export const users = pgTable("users", {
   role: roleEnum("role").notNull().default("customer"),
   otpCode: text("otp_code"),
   otpExpiry: timestamp("otp_expiry"),
+  profilePhoto: text("profile_photo"),
+  isActive: boolean("is_active").notNull().default(true),
+  tag: customerTagEnum("tag"),
+  lifetimeValue: decimal("lifetime_value", { precision: 12, scale: 2 }).notNull().default("0"),
+  totalOrders: integer("total_orders").notNull().default(0),
+  lastOrderDate: timestamp("last_order_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const sessions = pgTable("sessions", {
@@ -63,6 +76,12 @@ export const orders = pgTable("orders", {
   locationLat: text("location_lat"),
   locationLng: text("location_lng"),
   locationName: text("location_name"),
+  pricingSnapshot: jsonb("pricing_snapshot"),
+  promotionId: varchar("promotion_id"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  pickupFee: decimal("pickup_fee", { precision: 10, scale: 2 }).notNull().default("0"),
+  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull().default("0"),
+  expressFee: decimal("express_fee", { precision: 10, scale: 2 }).notNull().default("0"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -96,13 +115,59 @@ export const mediaLibrary = pgTable("media_library", {
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, otpCode: true, otpExpiry: true });
+export const deliveries = pgTable("deliveries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  technicianId: varchar("technician_id").references(() => users.id),
+  deliveryType: deliveryTypeEnum("delivery_type").notNull(),
+  status: deliveryStatusEnum("status").notNull().default("scheduled"),
+  scheduledDate: timestamp("scheduled_date"),
+  scheduledTimeWindow: text("scheduled_time_window"),
+  completedAt: timestamp("completed_at"),
+  failureReason: text("failure_reason"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const promotions = pgTable("promotions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  promoType: promoTypeEnum("promo_type").notNull(),
+  appliesTo: promoAppliesEnum("applies_to").notNull().default("order"),
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }),
+  couponCode: text("coupon_code"),
+  isVipOnly: boolean("is_vip_only").notNull().default(false),
+  isSingleUse: boolean("is_single_use").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  freePickupThreshold: decimal("free_pickup_threshold", { precision: 10, scale: 2 }),
+  expiresAt: timestamp("expires_at"),
+  targetUserId: varchar("target_user_id"),
+  usageCount: integer("usage_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const savedAddresses = pgTable("saved_addresses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  label: text("label").notNull(),
+  address: text("address").notNull(),
+  locationLat: text("location_lat"),
+  locationLng: text("location_lng"),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, otpCode: true, otpExpiry: true, createdAt: true });
 export const insertPricingRuleSchema = createInsertSchema(pricingRules).omit({ id: true });
 export const insertDeliveryZoneSchema = createInsertSchema(deliveryZones).omit({ id: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true });
 export const insertOrderPhotoSchema = createInsertSchema(orderPhotos).omit({ id: true, uploadedAt: true });
 export const insertMediaSchema = createInsertSchema(mediaLibrary).omit({ id: true, uploadedAt: true });
+export const insertDeliverySchema = createInsertSchema(deliveries).omit({ id: true, createdAt: true });
+export const insertPromotionSchema = createInsertSchema(promotions).omit({ id: true, usageCount: true, createdAt: true });
+export const insertSavedAddressSchema = createInsertSchema(savedAddresses).omit({ id: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -118,6 +183,12 @@ export type InsertOrderPhoto = z.infer<typeof insertOrderPhotoSchema>;
 export type OrderPhoto = typeof orderPhotos.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
 export type Media = typeof mediaLibrary.$inferSelect;
+export type InsertDelivery = z.infer<typeof insertDeliverySchema>;
+export type Delivery = typeof deliveries.$inferSelect;
+export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
+export type Promotion = typeof promotions.$inferSelect;
+export type InsertSavedAddress = z.infer<typeof insertSavedAddressSchema>;
+export type SavedAddress = typeof savedAddresses.$inferSelect;
 
 export const phoneSchema = z.string().transform((val) => {
   let cleaned = val.replace(/\s+/g, "").replace(/-/g, "");
@@ -150,11 +221,11 @@ export const bookingSchema = z.object({
 
 export const ORDER_STATUSES = [
   { value: "PENDING", label: "Pending", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" },
-  { value: "AWAITING_PICKUP", label: "Awaiting Pickup", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300" },
-  { value: "IN_CLEANING", label: "In Cleaning", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" },
+  { value: "AWAITING_PICKUP", label: "Picked Up", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300" },
+  { value: "IN_CLEANING", label: "Cleaning", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" },
   { value: "DRYING", label: "Drying", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300" },
   { value: "READY", label: "Ready", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
-  { value: "COMPLETED", label: "Completed", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" },
+  { value: "COMPLETED", label: "Delivered", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" },
 ] as const;
 
 export const CARPET_TYPES = [
@@ -167,3 +238,10 @@ export const CARPET_TYPES = [
   "Wall-to-Wall",
   "Silk",
 ] as const;
+
+export const TAG_COLORS: Record<string, string> = {
+  "VIP": "bg-amber-500 text-white",
+  "Frequent": "bg-blue-500 text-white",
+  "Corporate": "bg-slate-700 text-white",
+  "One-time": "bg-gray-400 text-white",
+};
