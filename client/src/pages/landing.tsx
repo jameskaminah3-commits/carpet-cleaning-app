@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -154,6 +154,24 @@ const testimonials = [
     text: "With a toddler and two cats, chemical-free cleaning was non-negotiable. CarpetPro delivered — the carpet felt softer than when we first bought it!",
     rating: 5,
   },
+  {
+    name: "Peter N.",
+    location: "Lavington, Nairobi",
+    text: "Our office carpets hadn't been properly cleaned in years. CarpetPro revived them in a single visit — the entire floor looks brand new. Highly recommend for corporate clients.",
+    rating: 5,
+  },
+  {
+    name: "Grace W.",
+    location: "Runda, Nairobi",
+    text: "I've tried 4 different cleaning services. CarpetPro is the only one that didn't leave my silk carpet feeling stiff. They understand premium fabrics.",
+    rating: 5,
+  },
+  {
+    name: "David M.",
+    location: "Kileleshwa, Nairobi",
+    text: "Fast pickup, same-day cleaning, and my shag carpet came back fluffier than ever. The pickup and delivery service is incredibly convenient.",
+    rating: 5,
+  },
 ];
 
 const steps = [
@@ -162,6 +180,139 @@ const steps = [
   { step: "3", title: "Deep Extraction", desc: "Industrial-grade cleaning with our proprietary vortex extraction technology" },
   { step: "4", title: "Ready to Use", desc: "Carpets returned dry, fresh, and ready to walk on — as fast as 2 hours" },
 ];
+
+function TestimonialsCarousel() {
+  const [current, setCurrent] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const next = useCallback(() => {
+    setCurrent((prev) => (prev + 1) % testimonials.length);
+  }, []);
+
+  const prev = useCallback(() => {
+    setCurrent((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  }, []);
+
+  useEffect(() => {
+    if (isPaused) return;
+    const timer = setInterval(next, 5000);
+    return () => clearInterval(timer);
+  }, [isPaused, next]);
+
+  const getVisibleIndices = () => {
+    const indices = [];
+    for (let i = -1; i <= 1; i++) {
+      indices.push((current + i + testimonials.length) % testimonials.length);
+    }
+    return indices;
+  };
+
+  const visible = getVisibleIndices();
+
+  return (
+    <section id="testimonials" className="py-20 sm:py-24 bg-card overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-14">
+          <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Client Stories</Badge>
+          <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-reviews-title">What Our Clients Say</h2>
+        </div>
+
+        <div
+          className="relative"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
+          <div className="hidden md:grid grid-cols-3 gap-6">
+            <AnimatePresence mode="popLayout">
+              {visible.map((idx, pos) => {
+                const t = testimonials[idx];
+                return (
+                  <motion.div
+                    key={`${t.name}-${idx}`}
+                    initial={{ opacity: 0, x: 80, scale: 0.9 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -80, scale: 0.9 }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                  >
+                    <Card className="p-6 h-full hover:shadow-lg transition-shadow">
+                      <div className="flex gap-1 mb-4">
+                        {Array.from({ length: t.rating }).map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        ))}
+                      </div>
+                      <p className="text-sm leading-relaxed mb-4 text-muted-foreground italic" data-testid={`text-testimonial-${idx}`}>"{t.text}"</p>
+                      <div>
+                        <p className="font-semibold text-sm">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">{t.location}</p>
+                      </div>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          <div className="md:hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current}
+                initial={{ opacity: 0, x: 60 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -60 }}
+                transition={{ duration: 0.4 }}
+              >
+                <Card className="p-6">
+                  <div className="flex gap-1 mb-4">
+                    {Array.from({ length: testimonials[current].rating }).map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <p className="text-sm leading-relaxed mb-4 text-muted-foreground italic">"{testimonials[current].text}"</p>
+                  <div>
+                    <p className="font-semibold text-sm">{testimonials[current].name}</p>
+                    <p className="text-xs text-muted-foreground">{testimonials[current].location}</p>
+                  </div>
+                </Card>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 mt-8">
+            <button
+              onClick={prev}
+              className="w-9 h-9 rounded-full border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
+              data-testid="button-testimonial-prev"
+              aria-label="Previous review"
+            >
+              <ChevronRight className="w-4 h-4 rotate-180" />
+            </button>
+            <div className="flex gap-2">
+              {testimonials.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrent(i)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    i === current ? "bg-primary w-6" : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                  }`}
+                  data-testid={`button-testimonial-dot-${i}`}
+                  aria-label={`Go to review ${i + 1}`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={next}
+              className="w-9 h-9 rounded-full border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
+              data-testid="button-testimonial-next"
+              aria-label="Next review"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
@@ -485,38 +636,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="testimonials" className="py-20 sm:py-24 bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Client Stories</Badge>
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-reviews-title">What Our Clients Say</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {testimonials.map((t) => (
-              <motion.div
-                key={t.name}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeUp}
-              >
-                <Card className="p-6 h-full hover:shadow-lg transition-shadow">
-                  <div className="flex gap-1 mb-4">
-                    {Array.from({ length: t.rating }).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-sm leading-relaxed mb-4 text-muted-foreground italic">"{t.text}"</p>
-                  <div>
-                    <p className="font-semibold text-sm">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.location}</p>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <TestimonialsCarousel />
 
       <section className="py-20 sm:py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />

@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, ArrowLeft, ArrowRight, Plus, X, MapPin, Camera, Loader2, CheckCircle2 } from "lucide-react";
+import { Sparkles, ArrowLeft, ArrowRight, Plus, X, MapPin, Camera, Loader2, CheckCircle2, Calculator } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { CARPET_TYPES } from "@shared/schema";
-import type { PricingRule, DeliveryZone } from "@shared/schema";
+import type { PricingRule, DeliveryZone, User } from "@shared/schema";
 
 interface CarpetItem {
   carpetType: string;
@@ -31,6 +31,16 @@ const emptyItem: CarpetItem = {
   description: "",
 };
 
+function getItemEstimate(item: CarpetItem, pricing: PricingRule[]) {
+  const w = parseFloat(item.width) || 0;
+  const l = parseFloat(item.length) || 0;
+  const qty = parseInt(item.quantity) || 1;
+  const rule = pricing.find((p) => p.carpetType === item.carpetType);
+  const pricePerSqM = rule ? parseFloat(rule.pricePerSqMeter) : 0;
+  const area = w * l;
+  return { area, pricePerSqM, qty, subtotal: area * pricePerSqM * qty };
+}
+
 export default function BookingPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -42,7 +52,12 @@ export default function BookingPage() {
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
 
-  const { data: pricing = [] } = useQuery<PricingRule[]>({
+  const { data: user } = useQuery<User | null>({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+  });
+
+  const { data: pricing = [], isLoading: pricingLoading } = useQuery<PricingRule[]>({
     queryKey: ["/api/pricing"],
   });
 
@@ -53,20 +68,14 @@ export default function BookingPage() {
   const createOrder = useMutation({
     mutationFn: async () => {
       const orderItems = items.map((item) => {
-        const w = parseFloat(item.width) || 0;
-        const l = parseFloat(item.length) || 0;
-        const qty = parseInt(item.quantity) || 1;
-        const rule = pricing.find((p) => p.carpetType === item.carpetType);
-        const pricePerSqM = rule ? parseFloat(rule.pricePerSqMeter) : 500;
-        const area = w * l;
-        const subtotal = area * pricePerSqM * qty;
+        const est = getItemEstimate(item, pricing);
         return {
           carpetType: item.carpetType,
-          width: w,
-          length: l,
-          quantity: qty,
-          unitPrice: pricePerSqM,
-          subtotal,
+          width: parseFloat(item.width) || 0,
+          length: parseFloat(item.length) || 0,
+          quantity: est.qty,
+          unitPrice: est.pricePerSqM,
+          subtotal: est.subtotal,
           description: item.description || undefined,
         };
       });
@@ -91,6 +100,15 @@ export default function BookingPage() {
       navigate("/customer");
     },
     onError: (err: Error) => {
+      if (err.message.includes("401") || err.message.includes("Unauthorized")) {
+        toast({
+          title: "Sign In Required",
+          description: "Please sign in to submit your order. Your estimate has been saved.",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -112,12 +130,7 @@ export default function BookingPage() {
   const getEstimate = () => {
     let total = 0;
     items.forEach((item) => {
-      const w = parseFloat(item.width) || 0;
-      const l = parseFloat(item.length) || 0;
-      const qty = parseInt(item.quantity) || 1;
-      const rule = pricing.find((p) => p.carpetType === item.carpetType);
-      const pricePerSqM = rule ? parseFloat(rule.pricePerSqMeter) : 500;
-      total += w * l * pricePerSqM * qty;
+      total += getItemEstimate(item, pricing).subtotal;
     });
     const zone = zones.find((z) => z.id === selectedZone);
     if (zone) total += parseFloat(zone.fee);
@@ -126,14 +139,23 @@ export default function BookingPage() {
 
   const canProceed = () => {
     if (step === 0) {
-      return items.every((item) => item.carpetType && parseFloat(item.width) > 0 && parseFloat(item.length) > 0);
+      return items.every(
+        (item) =>
+          item.carpetType &&
+          item.width.trim() !== "" && parseFloat(item.width) > 0 &&
+          item.length.trim() !== "" && parseFloat(item.length) > 0
+      );
     }
     if (step === 1) return true;
-    if (step === 2) return address.length > 0;
+    if (step === 2) return address.trim().length > 0;
     return true;
   };
 
-  const steps = ["Carpet Details", "Photos", "Delivery", "Review"];
+  const stepLabels = ["Carpet Details", "Photos", "Delivery", "Review"];
+
+  const itemsTotal = items.reduce((sum, item) => sum + getItemEstimate(item, pricing).subtotal, 0);
+  const zone = zones.find((z) => z.id === selectedZone);
+  const deliveryFee = zone ? parseFloat(zone.fee) : 0;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -151,9 +173,9 @@ export default function BookingPage() {
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto w-full px-4 py-6">
+      <div className="max-w-3xl mx-auto w-full px-4 py-6 flex-1">
         <div className="flex items-center gap-1 mb-8">
-          {steps.map((s, i) => (
+          {stepLabels.map((s, i) => (
             <div key={s} className="flex items-center flex-1">
               <div className="flex items-center gap-2">
                 <div
@@ -168,7 +190,7 @@ export default function BookingPage() {
                 </div>
                 <span className="text-xs font-medium hidden sm:block">{s}</span>
               </div>
-              {i < steps.length - 1 && (
+              {i < stepLabels.length - 1 && (
                 <div className={`flex-1 h-0.5 mx-2 rounded transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
               )}
             </div>
@@ -181,85 +203,130 @@ export default function BookingPage() {
               <div className="space-y-4">
                 <div>
                   <h2 className="text-xl font-serif font-bold mb-1" data-testid="text-step-title">Carpet Details</h2>
-                  <p className="text-sm text-muted-foreground">Add the carpets you'd like us to clean.</p>
+                  <p className="text-sm text-muted-foreground">Add the carpets you'd like us to clean. Pricing updates as you fill in details.</p>
                 </div>
-                {items.map((item, index) => (
-                  <Card key={index} className="p-4 sm:p-5">
-                    <div className="flex items-center justify-between gap-2 mb-4">
-                      <h3 className="font-semibold text-sm">Carpet {index + 1}</h3>
-                      {items.length > 1 && (
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)} data-testid={`button-remove-item-${index}`}>
-                          <X className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid gap-4">
-                      <div>
-                        <Label className="text-xs">Carpet Type</Label>
-                        <Select value={item.carpetType} onValueChange={(v) => updateItem(index, "carpetType", v)}>
-                          <SelectTrigger data-testid={`select-carpet-type-${index}`}>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CARPET_TYPES.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                {items.map((item, index) => {
+                  const est = getItemEstimate(item, pricing);
+                  const rule = pricing.find((p) => p.carpetType === item.carpetType);
+                  return (
+                    <Card key={index} className="p-4 sm:p-5">
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <h3 className="font-semibold text-sm">Carpet {index + 1}</h3>
+                        {items.length > 1 && (
+                          <Button variant="ghost" size="icon" onClick={() => removeItem(index)} data-testid={`button-remove-item-${index}`}>
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid gap-4">
                         <div>
-                          <Label className="text-xs">Width (m)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            placeholder="2.0"
-                            value={item.width}
-                            onChange={(e) => updateItem(index, "width", e.target.value)}
-                            data-testid={`input-width-${index}`}
+                          <Label className="text-xs">Carpet Type</Label>
+                          <Select value={item.carpetType} onValueChange={(v) => updateItem(index, "carpetType", v)}>
+                            <SelectTrigger data-testid={`select-carpet-type-${index}`}>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CARPET_TYPES.map((t) => {
+                                const pr = pricing.find((p) => p.carpetType === t);
+                                return (
+                                  <SelectItem key={t} value={t}>
+                                    {t} {pr ? `— KES ${parseFloat(pr.pricePerSqMeter).toLocaleString()}/m²` : ""}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                          {rule && (
+                            <p className="text-xs text-primary mt-1 font-medium" data-testid={`text-rate-${index}`}>
+                              Rate: KES {parseFloat(rule.pricePerSqMeter).toLocaleString()} per m²
+                            </p>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs">Width (m)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0.1"
+                              placeholder="2.0"
+                              value={item.width}
+                              onChange={(e) => updateItem(index, "width", e.target.value)}
+                              data-testid={`input-width-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Length (m)</Label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              min="0.1"
+                              placeholder="3.0"
+                              value={item.length}
+                              onChange={(e) => updateItem(index, "length", e.target.value)}
+                              data-testid={`input-length-${index}`}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Qty</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                              data-testid={`input-qty-${index}`}
+                            />
+                          </div>
+                        </div>
+
+                        {est.subtotal > 0 && (
+                          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center justify-between" data-testid={`estimate-card-${index}`}>
+                            <div className="flex items-center gap-2">
+                              <Calculator className="w-4 h-4 text-primary" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">
+                                  {est.area.toFixed(1)} m² x KES {est.pricePerSqM.toLocaleString()} x {est.qty}
+                                </p>
+                              </div>
+                            </div>
+                            <p className="font-bold text-primary" data-testid={`text-item-price-${index}`}>
+                              KES {est.subtotal.toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+
+                        <div>
+                          <Label className="text-xs">Notes (optional)</Label>
+                          <Textarea
+                            placeholder="Any special instructions or stains to note..."
+                            value={item.description}
+                            onChange={(e) => updateItem(index, "description", e.target.value)}
+                            className="resize-none"
+                            rows={2}
+                            data-testid={`input-notes-${index}`}
                           />
                         </div>
-                        <div>
-                          <Label className="text-xs">Length (m)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            placeholder="3.0"
-                            value={item.length}
-                            onChange={(e) => updateItem(index, "length", e.target.value)}
-                            data-testid={`input-length-${index}`}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Qty</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                            data-testid={`input-qty-${index}`}
-                          />
-                        </div>
                       </div>
-                      <div>
-                        <Label className="text-xs">Notes (optional)</Label>
-                        <Textarea
-                          placeholder="Any special instructions or stains to note..."
-                          value={item.description}
-                          onChange={(e) => updateItem(index, "description", e.target.value)}
-                          className="resize-none"
-                          rows={2}
-                          data-testid={`input-notes-${index}`}
-                        />
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
                 <Button variant="outline" className="w-full" onClick={addItem} data-testid="button-add-carpet">
                   <Plus className="w-4 h-4 mr-2" /> Add Another Carpet
                 </Button>
+
+                {itemsTotal > 0 && (
+                  <Card className="p-4 bg-slate-800 text-white" data-testid="card-running-total">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">Estimated Cleaning Cost</p>
+                        <p className="text-xs text-slate-300">{items.length} carpet{items.length > 1 ? "s" : ""} &middot; Delivery fee added next</p>
+                      </div>
+                      <p className="text-xl font-bold text-primary" data-testid="text-running-total">
+                        KES {itemsTotal.toLocaleString()}
+                      </p>
+                    </div>
+                  </Card>
+                )}
               </div>
             </motion.div>
           )}
@@ -274,7 +341,7 @@ export default function BookingPage() {
                 <Card className="p-6">
                   <label
                     htmlFor="photo-upload"
-                    className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-muted"
+                    className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg cursor-pointer transition-colors border-muted hover:border-primary/40"
                     data-testid="label-photo-upload"
                   >
                     <Camera className="w-10 h-10 text-muted-foreground mb-3" />
@@ -385,42 +452,40 @@ export default function BookingPage() {
                   <h2 className="text-xl font-serif font-bold mb-1" data-testid="text-step-title">Order Summary</h2>
                   <p className="text-sm text-muted-foreground">Review your order before submitting.</p>
                 </div>
-                <Card className="p-5 space-y-4">
+                <Card className="p-5 space-y-3">
                   <h3 className="font-semibold text-sm">Carpet Items</h3>
                   {items.map((item, i) => {
-                    const w = parseFloat(item.width) || 0;
-                    const l = parseFloat(item.length) || 0;
-                    const qty = parseInt(item.quantity) || 1;
-                    const rule = pricing.find((p) => p.carpetType === item.carpetType);
-                    const pricePerSqM = rule ? parseFloat(rule.pricePerSqMeter) : 500;
-                    const area = w * l;
-                    const subtotal = area * pricePerSqM * qty;
+                    const est = getItemEstimate(item, pricing);
                     return (
                       <div key={i} className="flex items-center justify-between gap-2 py-2 border-b last:border-0">
                         <div>
                           <p className="text-sm font-medium">{item.carpetType || "Unknown"}</p>
-                          <p className="text-xs text-muted-foreground">{w}m x {l}m — Qty: {qty}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {est.area.toFixed(1)} m² x KES {est.pricePerSqM.toLocaleString()} x {est.qty}
+                          </p>
                         </div>
-                        <p className="text-sm font-semibold" data-testid={`text-subtotal-${i}`}>KES {subtotal.toLocaleString()}</p>
+                        <p className="text-sm font-semibold" data-testid={`text-subtotal-${i}`}>KES {est.subtotal.toLocaleString()}</p>
                       </div>
                     );
                   })}
-                  {selectedZone && (
-                    <div className="flex items-center justify-between gap-2 py-2 border-b">
-                      <div>
-                        <p className="text-sm font-medium">Delivery Fee</p>
-                        <p className="text-xs text-muted-foreground">{zones.find((z) => z.id === selectedZone)?.name}</p>
+
+                  <div className="border-t pt-2 space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Cleaning</span>
+                      <span>KES {itemsTotal.toLocaleString()}</span>
+                    </div>
+                    {selectedZone && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Delivery ({zone?.name})</span>
+                        <span>KES {deliveryFee.toLocaleString()}</span>
                       </div>
-                      <p className="text-sm font-semibold">
-                        KES {parseFloat(zones.find((z) => z.id === selectedZone)?.fee || "0").toLocaleString()}
+                    )}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <p className="font-bold">Estimated Total</p>
+                      <p className="font-bold text-xl text-primary" data-testid="text-total">
+                        KES {getEstimate().toLocaleString()}
                       </p>
                     </div>
-                  )}
-                  <div className="flex items-center justify-between gap-2 pt-2">
-                    <p className="font-bold">Estimated Total</p>
-                    <p className="font-bold text-lg text-primary" data-testid="text-total">
-                      KES {getEstimate().toLocaleString()}
-                    </p>
                   </div>
                 </Card>
 
@@ -444,6 +509,13 @@ export default function BookingPage() {
                     </div>
                   </Card>
                 )}
+
+                {!user && (
+                  <Card className="p-4 border-primary/30 bg-primary/5" data-testid="card-login-notice">
+                    <p className="text-sm font-medium">You'll need to sign in to submit this order.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Don't worry — your estimate details will be ready for you after login.</p>
+                  </Card>
+                )}
               </div>
             </motion.div>
           )}
@@ -463,9 +535,23 @@ export default function BookingPage() {
                 Continue <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             ) : (
-              <Button onClick={() => createOrder.mutate()} disabled={createOrder.isPending} data-testid="button-submit-order">
+              <Button
+                onClick={() => {
+                  if (!user) {
+                    toast({
+                      title: "Sign In Required",
+                      description: "Please sign in to submit your booking.",
+                    });
+                    navigate("/login");
+                    return;
+                  }
+                  createOrder.mutate();
+                }}
+                disabled={createOrder.isPending}
+                data-testid="button-submit-order"
+              >
                 {createOrder.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Submit Order
+                {user ? "Submit Order" : "Sign In to Submit"}
               </Button>
             )}
           </div>
