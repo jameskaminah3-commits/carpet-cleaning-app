@@ -1,0 +1,146 @@
+ROLE
+You are a senior full-stack engineer building a production SaaS that must run identically in local, container, or serverless environments without code changes.
+
+Do NOT reference any hosting providers in the implementation.
+
+SYSTEM OVERVIEW
+
+"CarpetPro Executive" — a premium operations platform for a carpet cleaning company with three interfaces:
+Customer, Technician, and Admin.
+
+STACK
+
+Frontend: Next.js App Router + TypeScript
+Styling: TailwindCSS + Framer Motion
+ORM: Prisma
+Database: PostgreSQL compatible schema
+Auth: database-backed session cookies (not JWT)
+State: React Server Components + Server Actions
+
+CORE EXECUTION RULES
+
+Stateless servers — persistent state only in database or object storage
+
+No provider SDK assumptions
+
+All configuration via environment variables
+
+No direct DB calls inside UI components
+
+All business logic in /server/services
+
+UTC timestamps
+
+UUID primary keys
+
+Server computes all prices
+
+REQUIRED STRUCTURE
+
+/app
+/components
+/lib
+/server/db
+/server/services
+/server/storage
+/server/payments
+/server/auth
+/types
+
+STORAGE PROVIDER
+
+Create /server/storage/provider.ts
+
+Methods:
+
+put(buffer, mimeType, folder) → returns fileKey
+
+getUrl(fileKey)
+
+delete(fileKey)
+
+Implement temporary LocalObjectStorageProvider.
+
+All media (marketing + carpet photos) must use this abstraction.
+
+PAYMENT PROVIDER
+
+Create /server/payments/provider.ts
+
+Methods:
+
+requestPayment(orderId, phone, amount)
+
+verifyPayment(reference)
+
+Implement MockMobileMoneyProvider.
+
+DATABASE MODELS
+
+Users
+Sessions
+Orders
+OrderItems
+OrderPhotos
+PricingRules
+DeliveryZones
+MediaLibrary
+ServiceLocation
+
+Order Status Enum:
+PENDING → AWAITING_PICKUP → IN_CLEANING → DRYING → READY → COMPLETED
+
+Payment fields:
+totalAmount
+depositPaid
+balanceDue
+isLocked
+
+ServiceLocation stores coordinates or place identifier.
+
+CUSTOMER EXPERIENCE
+
+Phone or email login (OTP placeholder)
+
+Phone numbers must:
+validate Kenyan formats
+normalize to +254XXXXXXXXX
+
+Booking flow:
+service type → carpet details → photo upload → estimate → order creation
+
+Customer cannot edit order once locked by admin.
+
+ADMIN LOGIC
+
+Manage pricing and delivery zones
+Upload/delete marketing media
+Adjust final order price after inspection
+Lock order → prevents editing and triggers balance request
+
+TECHNICIAN UI
+
+Mobile optimized task list
+Navigation opens maps using ServiceLocation
+Completing a job requires after-cleaning photo
+
+UI
+
+Premium mobile-first:
+rounded-xl cards
+soft shadows
+bottom sheets
+sticky CTA
+smooth 0.2–0.35s motion
+before/after comparison slider
+
+BUILD ORDER
+
+1 Schema & migrations
+2 Storage provider
+3 Payment provider
+4 Admin CMS
+5 Landing page
+6 Booking flow
+7 Technician panel
+8 UI polish
