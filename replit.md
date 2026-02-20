@@ -58,5 +58,13 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - order_photos (id, orderId, fileKey, photoType, uploadedAt)
 - media_library (id, title, fileKey, mimeType, category, uploadedAt)
 
+## Security
+- Frontend route guards: Protected routes redirect unauthorized users based on role
+- Backend auth middleware: All protected endpoints require valid session
+- Admin middleware: Admin-only endpoints check role
+- Ownership checks: Customers can only view their own orders
+- Input validation: All create/update endpoints validate payloads (status, price, lock, pricing rules, zones)
+- Valid order statuses: PENDING, AWAITING_PICKUP, IN_CLEANING, DRYING, READY, COMPLETED
+
 ## Order Statuses
 PENDING → AWAITING_PICKUP → IN_CLEANING → DRYING → READY → COMPLETED
