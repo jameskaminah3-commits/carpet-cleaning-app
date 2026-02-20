@@ -32,24 +32,29 @@ function HeroBackground() {
   const fiberY = useTransform(scrollYProgress, [0, 0.4], [0, -60]);
 
   const bubbles = useMemo(() =>
-    Array.from({ length: 24 }, (_, i) => ({
-      left: `${3 + (i * 4.1) % 94}%`,
-      bottom: `${-5 - (i * 3) % 10}%`,
-      size: 4 + (i % 5) * 3,
-      duration: `${10 + (i % 7) * 2}s`,
-      delay: `${(i * 0.8) % 12}s`,
-      opacity: 0.15 + (i % 4) * 0.1,
+    Array.from({ length: 30 }, (_, i) => ({
+      left: `${2 + (i * 3.3) % 96}%`,
+      bottom: `${-5 - (i * 2) % 10}%`,
+      size: 5 + (i % 6) * 4,
+      duration: `${8 + (i % 8) * 2}s`,
+      delay: `${(i * 0.7) % 10}s`,
+      opacity: 0.25 + (i % 4) * 0.12,
     })), []);
 
   return (
     <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0c2d6b] via-[#1a4a8a] to-[#0e3570]" />
 
       <div className="absolute inset-0 hero-gradient-mesh" />
 
-      <div className="hero-ripple-1 absolute w-[800px] h-[800px] rounded-full border border-cyan-400/10 top-[60%] left-[30%]" />
-      <div className="hero-ripple-2 absolute w-[600px] h-[600px] rounded-full border border-blue-400/8 top-[40%] left-[50%]" />
-      <div className="hero-ripple-3 absolute w-[1000px] h-[1000px] rounded-full border border-sky-300/6 top-[50%] left-[40%]" />
+      <div className="hero-glow-pulse absolute w-[500px] h-[500px] rounded-full bg-sky-400/15 blur-[100px] top-[20%] left-[15%]" />
+      <div className="hero-glow-pulse absolute w-[400px] h-[400px] rounded-full bg-cyan-300/12 blur-[80px] top-[50%] right-[20%]" style={{ animationDelay: "3s" }} />
+      <div className="hero-glow-pulse absolute w-[300px] h-[300px] rounded-full bg-blue-300/10 blur-[60px] bottom-[10%] left-[40%]" style={{ animationDelay: "5s" }} />
+
+      <div className="hero-ripple-1 absolute w-[700px] h-[700px] rounded-full border-2 border-cyan-300/25 top-[55%] left-[25%]" />
+      <div className="hero-ripple-2 absolute w-[500px] h-[500px] rounded-full border-2 border-sky-200/20 top-[35%] left-[55%]" />
+      <div className="hero-ripple-3 absolute w-[900px] h-[900px] rounded-full border border-blue-200/15 top-[45%] left-[35%]" />
+      <div className="hero-ripple-4 absolute w-[600px] h-[600px] rounded-full border-2 border-cyan-200/18 top-[60%] left-[45%]" />
 
       {bubbles.map((b, i) => (
         <div
@@ -60,8 +65,8 @@ function HeroBackground() {
             bottom: b.bottom,
             width: b.size,
             height: b.size,
-            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,${b.opacity}), rgba(147,197,253,${b.opacity * 0.5}) 60%, transparent)`,
-            boxShadow: `0 0 ${b.size * 2}px rgba(147,197,253,${b.opacity * 0.3})`,
+            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,${b.opacity}), rgba(186,230,253,${b.opacity * 0.6}) 50%, transparent)`,
+            boxShadow: `0 0 ${b.size * 2.5}px rgba(186,230,253,${b.opacity * 0.4})`,
             "--duration": b.duration,
             "--delay": b.delay,
           } as React.CSSProperties}
@@ -73,7 +78,7 @@ function HeroBackground() {
         style={{ y: fiberY }}
       />
 
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_30%_50%,transparent,rgba(2,6,23,0.7)_70%,rgba(2,6,23,0.95))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_30%_45%,transparent,rgba(12,45,107,0.4)_60%,rgba(12,45,107,0.7))]" />
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent" />
     </div>
   );
