@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,42 +27,55 @@ const scaleIn = {
   visible: { opacity: 1, scale: 1 },
 };
 
-function AnimatedParticle({ delay, x, size }: { delay: number; x: number; size: number }) {
-  return (
-    <motion.div
-      className="absolute rounded-full bg-primary/20"
-      style={{ width: size, height: size, left: `${x}%` }}
-      initial={{ y: "100vh", opacity: 0 }}
-      animate={{
-        y: "-10vh",
-        opacity: [0, 0.6, 0.6, 0],
-      }}
-      transition={{
-        duration: 12 + Math.random() * 8,
-        repeat: Infinity,
-        delay,
-        ease: "linear",
-      }}
-    />
-  );
-}
+function HeroBackground() {
+  const { scrollYProgress } = useScroll();
+  const fiberY = useTransform(scrollYProgress, [0, 0.4], [0, -60]);
 
-function FloatingOrb({ className, delay }: { className: string; delay: number }) {
+  const bubbles = useMemo(() =>
+    Array.from({ length: 24 }, (_, i) => ({
+      left: `${3 + (i * 4.1) % 94}%`,
+      bottom: `${-5 - (i * 3) % 10}%`,
+      size: 4 + (i % 5) * 3,
+      duration: `${10 + (i % 7) * 2}s`,
+      delay: `${(i * 0.8) % 12}s`,
+      opacity: 0.15 + (i % 4) * 0.1,
+    })), []);
+
   return (
-    <motion.div
-      className={`absolute rounded-full blur-3xl ${className}`}
-      animate={{
-        y: [0, -30, 0, 30, 0],
-        x: [0, 20, -20, 10, 0],
-        scale: [1, 1.1, 0.95, 1.05, 1],
-      }}
-      transition={{
-        duration: 20,
-        repeat: Infinity,
-        delay,
-        ease: "easeInOut",
-      }}
-    />
+    <div className="absolute inset-0">
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0a1628] to-slate-950" />
+
+      <div className="absolute inset-0 hero-gradient-mesh" />
+
+      <div className="hero-ripple-1 absolute w-[800px] h-[800px] rounded-full border border-cyan-400/10 top-[60%] left-[30%]" />
+      <div className="hero-ripple-2 absolute w-[600px] h-[600px] rounded-full border border-blue-400/8 top-[40%] left-[50%]" />
+      <div className="hero-ripple-3 absolute w-[1000px] h-[1000px] rounded-full border border-sky-300/6 top-[50%] left-[40%]" />
+
+      {bubbles.map((b, i) => (
+        <div
+          key={i}
+          className="hero-bubble absolute rounded-full"
+          style={{
+            left: b.left,
+            bottom: b.bottom,
+            width: b.size,
+            height: b.size,
+            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,${b.opacity}), rgba(147,197,253,${b.opacity * 0.5}) 60%, transparent)`,
+            boxShadow: `0 0 ${b.size * 2}px rgba(147,197,253,${b.opacity * 0.3})`,
+            "--duration": b.duration,
+            "--delay": b.delay,
+          } as React.CSSProperties}
+        />
+      ))}
+
+      <motion.div
+        className="absolute inset-0 hero-fiber-texture"
+        style={{ y: fiberY }}
+      />
+
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_30%_50%,transparent,rgba(2,6,23,0.7)_70%,rgba(2,6,23,0.95))]" />
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent" />
+    </div>
   );
 }
 
@@ -147,14 +160,6 @@ const steps = [
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
-  const { scrollYProgress } = useScroll();
-  const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -80]);
-
-  const particles = Array.from({ length: 18 }, (_, i) => ({
-    delay: i * 1.2,
-    x: Math.random() * 100,
-    size: 4 + Math.random() * 8,
-  }));
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -186,23 +191,7 @@ export default function LandingPage() {
       </header>
 
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-          <FloatingOrb className="w-96 h-96 bg-primary/15 top-10 -left-20" delay={0} />
-          <FloatingOrb className="w-80 h-80 bg-blue-500/10 bottom-10 right-10" delay={3} />
-          <FloatingOrb className="w-64 h-64 bg-amber-500/10 top-1/2 left-1/3" delay={6} />
-          <FloatingOrb className="w-48 h-48 bg-emerald-500/8 top-20 right-1/4" delay={9} />
-
-          {particles.map((p, i) => (
-            <AnimatedParticle key={i} {...p} />
-          ))}
-
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.6)_100%)]" />
-
-          <motion.div
-            className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent"
-            style={{ y: heroY }}
-          />
-        </div>
+        <HeroBackground />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
           <motion.div
@@ -390,8 +379,8 @@ export default function LandingPage() {
       </section>
 
       <section className="py-20 sm:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden">
-        <FloatingOrb className="w-80 h-80 bg-primary/10 -top-20 -right-20" delay={0} />
-        <FloatingOrb className="w-64 h-64 bg-emerald-500/10 bottom-0 left-10" delay={4} />
+        <div className="absolute w-80 h-80 rounded-full bg-primary/8 blur-3xl -top-20 -right-20" />
+        <div className="absolute w-64 h-64 rounded-full bg-emerald-500/8 blur-3xl bottom-0 left-10" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -526,7 +515,7 @@ export default function LandingPage() {
 
       <section className="py-20 sm:py-28 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
-        <FloatingOrb className="w-64 h-64 bg-primary/10 top-0 right-0" delay={2} />
+        <div className="absolute w-64 h-64 rounded-full bg-primary/8 blur-3xl top-0 right-0" />
 
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
