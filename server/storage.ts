@@ -647,6 +647,17 @@ export class DatabaseStorage implements IStorage {
       { userId: customer1.id, label: "Home", address: "Brookside Apartments, Apt 4B, Westlands", isDefault: true },
       { userId: customer1.id, label: "Office", address: "ABC Tower, 5th Floor, Nairobi CBD" },
     ]);
+
+    await db.insert(mediaLibrary).values([
+      { title: "Persian Rug — Before", subtitle: "Heavy soil and coffee stains", fileKey: "/gallery/before-persian.png", mimeType: "image/png", category: "before-after", isPublic: true },
+      { title: "Persian Rug — After", subtitle: "Original colors fully restored", fileKey: "/gallery/after-persian.png", mimeType: "image/png", category: "before-after", isPublic: true },
+      { title: "Shag Carpet — Before", subtitle: "Pet stains and discoloration", fileKey: "/gallery/before-shag.png", mimeType: "image/png", category: "before-after", isPublic: true },
+      { title: "Shag Carpet — After", subtitle: "Bright white pile restored", fileKey: "/gallery/after-shag.png", mimeType: "image/png", category: "before-after", isPublic: true },
+      { title: "Office Carpet — Before", subtitle: "Traffic wear and coffee spills", fileKey: "/gallery/before-office.png", mimeType: "image/png", category: "before-after", isPublic: true },
+      { title: "Office Carpet — After", subtitle: "Uniform color restored", fileKey: "/gallery/after-office.png", mimeType: "image/png", category: "before-after", isPublic: true },
+      { title: "Silk Rug — Before", subtitle: "Water damage and yellowing", fileKey: "/gallery/before-silk.png", mimeType: "image/png", category: "before-after", isPublic: true },
+      { title: "Silk Rug — After", subtitle: "Lustrous finish restored", fileKey: "/gallery/after-silk.png", mimeType: "image/png", category: "before-after", isPublic: true },
+    ]);
   }
 }
 
