@@ -109,9 +109,11 @@ export const orderPhotos = pgTable("order_photos", {
 export const mediaLibrary = pgTable("media_library", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
+  subtitle: text("subtitle"),
   fileKey: text("file_key").notNull(),
   mimeType: text("mime_type").notNull(),
   category: text("category").notNull().default("general"),
+  isPublic: boolean("is_public").notNull().default(false),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
 });
 
