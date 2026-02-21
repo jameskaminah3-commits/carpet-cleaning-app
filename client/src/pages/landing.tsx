@@ -185,6 +185,7 @@ const steps = [
 
 function BeforeAfterGallery() {
   const { data: publicMedia = [] } = useQuery<Media[]>({ queryKey: ["/api/media/public"] });
+  const [lightbox, setLightbox] = useState<{ src: string; isVideo: boolean; title: string; subtitle: string } | null>(null);
 
   const slides = useMemo(() => {
     if (publicMedia.length === 0) return [];
@@ -222,72 +223,146 @@ function BeforeAfterGallery() {
   const trackItems = slides.length >= 3 ? [...slides, ...slides, ...slides] : [...slides];
 
   return (
-    <section className="py-20 sm:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden" data-testid="section-before-after">
-      <div className="absolute w-80 h-80 rounded-full bg-primary/8 blur-3xl -top-20 -right-20" />
-      <div className="absolute w-64 h-64 rounded-full bg-emerald-500/8 blur-3xl bottom-0 left-10" />
+    <>
+      <section className="py-20 sm:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden" data-testid="section-before-after">
+        <div className="absolute w-80 h-80 rounded-full bg-primary/8 blur-3xl -top-20 -right-20" />
+        <div className="absolute w-64 h-64 rounded-full bg-emerald-500/8 blur-3xl bottom-0 left-10" />
 
-      <div className="relative z-10">
-        <div className="text-center mb-12 px-4 sm:px-6 lg:px-8">
-          <Badge variant="secondary" className="mb-4 bg-white/10 border-white/20 text-white text-xs">Real Results</Badge>
-          <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-before-after-title">
-            Before & <span className="text-primary">After</span>
-          </h2>
-          <p className="mt-4 text-white/60 max-w-2xl mx-auto">
-            See the difference our Deep Extraction Technology makes. Every carpet tells a transformation story.
-          </p>
-        </div>
+        <div className="relative z-10">
+          <div className="text-center mb-12 px-4 sm:px-6 lg:px-8">
+            <Badge variant="secondary" className="mb-4 bg-white/10 border-white/20 text-white text-xs">Real Results</Badge>
+            <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-before-after-title">
+              Before & <span className="text-primary">After</span>
+            </h2>
+            <p className="mt-4 text-white/60 max-w-2xl mx-auto">
+              See the difference our Deep Extraction Technology makes. Every carpet tells a transformation story.
+            </p>
+          </div>
 
-        <div className="overflow-hidden">
-          <div
-            ref={trackRef}
-            className={`flex gap-6 ${slides.length >= 3 ? "gallery-scroll-track" : "justify-center"}`}
-            style={slides.length >= 3 ? { ["--duration" as string]: `${slides.length * 5}s` } : undefined}
-          >
-            {trackItems.map((slide, i) => (
-              <div key={`${slide.id}-${i}`} className="flex-shrink-0 w-[280px] sm:w-[340px] lg:w-[400px]">
-                {slide.isVideo ? (
-                  <div className="rounded-xl overflow-hidden relative">
-                    <video
-                      src={slide.src}
-                      className="w-full aspect-video object-cover"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      preload="metadata"
-                      data-testid={`video-gallery-${i}`}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                    <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                      VIDEO
+          <div className="overflow-hidden">
+            <div
+              ref={trackRef}
+              className={`flex gap-6 ${slides.length >= 3 ? "gallery-scroll-track" : "justify-center"}`}
+              style={slides.length >= 3 ? { ["--duration" as string]: `${slides.length * 5}s` } : undefined}
+            >
+              {trackItems.map((slide, i) => (
+                <div
+                  key={`${slide.id}-${i}`}
+                  className="flex-shrink-0 w-[280px] sm:w-[340px] lg:w-[400px] cursor-pointer group"
+                  onClick={() => setLightbox(slide)}
+                  data-testid={`gallery-item-${i}`}
+                >
+                  {slide.isVideo ? (
+                    <div className="rounded-xl overflow-hidden relative">
+                      <video
+                        src={slide.src}
+                        className="w-full aspect-video object-cover transition-transform duration-300 group-hover:scale-105"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="auto"
+                        data-testid={`video-gallery-${i}`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                      <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                        VIDEO
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="w-12 h-12 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                          <Zap className="w-5 h-5 text-white" />
+                        </div>
+                      </div>
                     </div>
+                  ) : (
+                    <div className="rounded-xl overflow-hidden relative">
+                      <img
+                        src={slide.src}
+                        alt={slide.title}
+                        className="w-full aspect-video object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="w-12 h-12 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
+                          <Sparkles className="w-5 h-5 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-3 text-center">
+                    <p className="font-semibold text-sm text-white" data-testid={`text-gallery-title-${i}`}>{slide.title}</p>
+                    {slide.subtitle && <p className="text-xs text-white/50" data-testid={`text-gallery-subtitle-${i}`}>{slide.subtitle}</p>}
                   </div>
-                ) : (
-                  <div className="rounded-xl overflow-hidden relative">
-                    <img
-                      src={slide.src}
-                      alt={slide.title}
-                      className="w-full aspect-video object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  </div>
-                )}
-                <div className="mt-3 text-center">
-                  <p className="font-semibold text-sm text-white" data-testid={`text-gallery-title-${i}`}>{slide.title}</p>
-                  {slide.subtitle && <p className="text-xs text-white/50" data-testid={`text-gallery-subtitle-${i}`}>{slide.subtitle}</p>}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center mt-10 px-4">
+            <p className="text-white/50 text-xs">Trusted by 5,000+ Nairobi homes and offices</p>
           </div>
         </div>
+      </section>
 
-        <div className="text-center mt-10 px-4">
-          <p className="text-white/50 text-xs">Trusted by 5,000+ Nairobi homes and offices</p>
-        </div>
-      </div>
-    </section>
+      <AnimatePresence>
+        {lightbox && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+            onClick={() => setLightbox(null)}
+            data-testid="lightbox-overlay"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setLightbox(null)}
+                className="absolute -top-2 -right-2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+                data-testid="button-close-lightbox"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+
+              {lightbox.isVideo ? (
+                <video
+                  src={lightbox.src}
+                  className="w-full max-h-[75vh] rounded-xl object-contain"
+                  autoPlay
+                  loop
+                  controls
+                  playsInline
+                  preload="auto"
+                  data-testid="lightbox-video"
+                />
+              ) : (
+                <img
+                  src={lightbox.src}
+                  alt={lightbox.title}
+                  className="w-full max-h-[75vh] rounded-xl object-contain"
+                  data-testid="lightbox-image"
+                />
+              )}
+
+              <div className="mt-4 text-center">
+                <h3 className="text-white font-semibold text-lg" data-testid="lightbox-title">{lightbox.title}</h3>
+                {lightbox.subtitle && <p className="text-white/60 text-sm mt-1" data-testid="lightbox-subtitle">{lightbox.subtitle}</p>}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
