@@ -1,8 +1,10 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { randomUUID, randomInt } from "crypto";
-import { loginSchema, verifyOtpSchema } from "@shared/schema";
+import { loginSchema, verifyOtpSchema, ORDER_STATUSES, orders } from "@shared/schema";
 
 const paramId = (req: Request) => req.params.id as string;
 
@@ -183,12 +185,57 @@ export async function registerRoutes(
 
       const pricingRulesSnapshot = await storage.getPricingRules();
 
+      let serverItemsTotal = 0;
+      for (const item of items) {
+        const rule = pricingRulesSnapshot.find(r => r.carpetType === item.carpetType && r.isActive);
+        const price = rule ? parseFloat(rule.pricePerSqMeter) : 0;
+        const area = (parseFloat(item.width) || 0) * (parseFloat(item.length) || 0);
+        serverItemsTotal += area * price * (item.quantity || 1);
+      }
+
+      let zone = null;
+      let serverDeliveryFee = 0;
+      if (deliveryZoneId) {
+        const zones = await storage.getDeliveryZones();
+        zone = zones.find(z => z.id === deliveryZoneId);
+        serverDeliveryFee = zone ? parseFloat(zone.fee) : 0;
+      }
+
+      let serverDiscount = 0;
+      let validPromoId = null;
+      if (promotionId) {
+        const user = await storage.getUser(req.userId!);
+        const allPromos = await storage.getPromotions();
+        const promo = allPromos.find(p => p.id === promotionId);
+        if (promo && promo.isActive) {
+          if (promo.isVipOnly && user?.tag !== "VIP") {
+            return res.status(400).json({ message: "This promotion is for VIP customers only" });
+          }
+          if ((promo.minOrders ?? 0) > 0 && (user?.totalOrders ?? 0) < (promo.minOrders ?? 0)) {
+            return res.status(400).json({ message: `You need at least ${promo.minOrders} orders to use this promotion` });
+          }
+          if (promo.targetTag && user?.tag !== promo.targetTag) {
+            return res.status(400).json({ message: `This promotion is for ${promo.targetTag} customers only` });
+          }
+          validPromoId = promo.id;
+          if (promo.promoType === "percentage" && promo.discountValue) {
+            serverDiscount = Math.round(serverItemsTotal * parseFloat(promo.discountValue) / 100);
+          } else if (promo.promoType === "fixed" && promo.discountValue) {
+            serverDiscount = Math.min(parseFloat(promo.discountValue), serverItemsTotal);
+          } else if (promo.promoType === "free_pickup" || promo.promoType === "free_delivery") {
+            serverDiscount = serverDeliveryFee;
+          }
+        }
+      }
+
+      const serverTotal = Math.max(0, serverItemsTotal + serverDeliveryFee - serverDiscount);
+
       const order = await storage.createOrder({
         customerId: req.userId!,
         status: "PENDING",
-        totalAmount: String(totalAmount || 0),
+        totalAmount: String(serverTotal),
         depositPaid: "0",
-        balanceDue: String(totalAmount || 0),
+        balanceDue: String(serverTotal),
         isLocked: false,
         deliveryZoneId: deliveryZoneId || null,
         pickupAddress: pickupAddress || null,
@@ -198,10 +245,10 @@ export async function registerRoutes(
         locationLng: null,
         technicianId: null,
         pricingSnapshot: { rules: pricingRulesSnapshot, timestamp: new Date().toISOString() },
-        promotionId: promotionId || null,
-        discountAmount: String(discountAmount || 0),
+        promotionId: validPromoId,
+        discountAmount: String(serverDiscount),
         pickupFee: String(pickupFee || 0),
-        deliveryFee: String(deliveryFee || 0),
+        deliveryFee: String(serverDeliveryFee),
         expressFee: String(expressFee || 0),
       });
 
@@ -308,7 +355,21 @@ export async function registerRoutes(
       }
       const order = await storage.getOrder(paramId(req));
       if (!order) return res.status(404).json({ message: "Order not found" });
+      if (req.body.status === "IN_CLEANING" && parseFloat(order.balanceDue) > 0) {
+        return res.status(400).json({ message: `Cannot start cleaning — customer has outstanding balance of KES ${parseFloat(order.balanceDue).toLocaleString()}. Payment must be cleared first.` });
+      }
       await storage.updateOrderStatus(paramId(req), req.body.status);
+      const statusInfo = ORDER_STATUSES.find(s => s.value === req.body.status);
+      const statusLabel = statusInfo?.label || req.body.status;
+      await storage.createNotification({
+        userId: order.customerId,
+        type: "order_status",
+        title: statusLabel,
+        message: `Your order status has been updated to ${statusLabel}`,
+        orderId: order.id,
+        amount: null,
+        isRead: false,
+      });
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -337,7 +398,16 @@ export async function registerRoutes(
       }
       const order = await storage.getOrder(paramId(req));
       if (!order) return res.status(404).json({ message: "Order not found" });
-      await storage.updateOrderPrice(paramId(req), String(amount));
+      const updatedOrder = await storage.updateOrderPrice(paramId(req), String(amount));
+      await storage.createNotification({
+        userId: order.customerId,
+        type: "payment_request",
+        title: "Price Updated",
+        message: `Your order price has been adjusted. New balance: KES ${updatedOrder.balanceDue}`,
+        orderId: order.id,
+        amount: updatedOrder.balanceDue,
+        isRead: false,
+      });
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -495,6 +565,8 @@ export async function registerRoutes(
         freePickupThreshold: req.body.freePickupThreshold || null,
         expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
         targetUserId: req.body.targetUserId || null,
+        minOrders: req.body.minOrders || 0,
+        targetTag: req.body.targetTag || null,
       });
       res.json(promo);
     } catch (err: any) {
@@ -505,6 +577,102 @@ export async function registerRoutes(
   app.delete("/api/admin/promotions/:id", authMiddleware, adminMiddleware, async (req, res) => {
     await storage.deletePromotion(paramId(req));
     res.json({ success: true });
+  });
+
+  // Notification routes
+  app.get("/api/notifications", authMiddleware, async (req, res) => {
+    try {
+      const notifs = await storage.getNotificationsForUser(req.userId!);
+      res.json(notifs);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", authMiddleware, async (req, res) => {
+    try {
+      const count = await storage.getUnreadNotificationCount(req.userId!);
+      res.json({ count });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", authMiddleware, async (req, res) => {
+    try {
+      await storage.markNotificationRead(paramId(req));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Payment simulation
+  app.post("/api/payments/stk-push", authMiddleware, async (req, res) => {
+    try {
+      const { orderId, phone } = req.body;
+      if (!orderId) return res.status(400).json({ message: "orderId is required" });
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.customerId !== req.userId) return res.status(403).json({ message: "Access denied" });
+      const amountPaid = order.totalAmount;
+      await storage.updateOrderPrice(order.id, order.totalAmount);
+      const [updated] = await db.update(orders).set({
+        depositPaid: order.totalAmount,
+        balanceDue: "0",
+        updatedAt: new Date(),
+      }).where(eq(orders.id, order.id)).returning();
+      await storage.createNotification({
+        userId: order.customerId,
+        type: "system",
+        title: "Payment Received",
+        message: `Payment of KES ${amountPaid} received for your order`,
+        orderId: order.id,
+        amount: amountPaid,
+        isRead: false,
+      });
+      res.json({ success: true, amountPaid });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Promotion apply
+  app.post("/api/promotions/apply", authMiddleware, async (req, res) => {
+    try {
+      const { promotionId, orderId } = req.body;
+      if (!promotionId || !orderId) return res.status(400).json({ message: "promotionId and orderId are required" });
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.customerId !== req.userId) return res.status(403).json({ message: "Access denied" });
+      const eligiblePromos = await storage.getPromotionsForUser(req.userId!);
+      const promo = eligiblePromos.find(p => p.id === promotionId);
+      if (!promo) return res.status(400).json({ message: "Promotion not available or not eligible" });
+      let discountAmount = 0;
+      const orderTotal = parseFloat(order.totalAmount);
+      if (promo.promoType === "percentage" && promo.discountValue) {
+        discountAmount = orderTotal * (parseFloat(promo.discountValue) / 100);
+      } else if (promo.promoType === "fixed" && promo.discountValue) {
+        discountAmount = parseFloat(promo.discountValue);
+      } else if (promo.promoType === "free_pickup") {
+        discountAmount = parseFloat(order.pickupFee);
+      } else if (promo.promoType === "free_delivery") {
+        discountAmount = parseFloat(order.deliveryFee);
+      }
+      const newTotal = Math.max(0, orderTotal - discountAmount);
+      const depositPaid = parseFloat(order.depositPaid);
+      const newBalance = Math.max(0, newTotal - depositPaid);
+      const [updated] = await db.update(orders).set({
+        promotionId,
+        discountAmount: String(discountAmount),
+        totalAmount: String(newTotal),
+        balanceDue: String(newBalance),
+        updatedAt: new Date(),
+      }).where(eq(orders.id, orderId)).returning();
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
   });
 
   // Technician routes

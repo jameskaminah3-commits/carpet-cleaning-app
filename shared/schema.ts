@@ -143,6 +143,8 @@ export const promotions = pgTable("promotions", {
   freePickupThreshold: decimal("free_pickup_threshold", { precision: 10, scale: 2 }),
   expiresAt: timestamp("expires_at"),
   targetUserId: varchar("target_user_id"),
+  minOrders: integer("min_orders").notNull().default(0),
+  targetTag: customerTagEnum("target_tag"),
   usageCount: integer("usage_count").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -158,6 +160,20 @@ export const savedAddresses = pgTable("saved_addresses", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const notificationTypeEnum = pgEnum("notification_type", ["order_status", "payment_request", "promotion", "system"]);
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: notificationTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  orderId: varchar("order_id"),
+  amount: decimal("amount", { precision: 10, scale: 2 }),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, otpCode: true, otpExpiry: true, createdAt: true });
 export const insertPricingRuleSchema = createInsertSchema(pricingRules).omit({ id: true });
 export const insertDeliveryZoneSchema = createInsertSchema(deliveryZones).omit({ id: true });
@@ -168,6 +184,7 @@ export const insertMediaSchema = createInsertSchema(mediaLibrary).omit({ id: tru
 export const insertDeliverySchema = createInsertSchema(deliveries).omit({ id: true, createdAt: true });
 export const insertPromotionSchema = createInsertSchema(promotions).omit({ id: true, usageCount: true, createdAt: true });
 export const insertSavedAddressSchema = createInsertSchema(savedAddresses).omit({ id: true, createdAt: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -189,6 +206,8 @@ export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
 export type Promotion = typeof promotions.$inferSelect;
 export type InsertSavedAddress = z.infer<typeof insertSavedAddressSchema>;
 export type SavedAddress = typeof savedAddresses.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
 
 export const phoneSchema = z.string().transform((val) => {
   let cleaned = val.replace(/\s+/g, "").replace(/-/g, "");

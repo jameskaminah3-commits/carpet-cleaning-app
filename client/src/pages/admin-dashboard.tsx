@@ -443,7 +443,7 @@ function PromotionsTab() {
   const [form, setForm] = useState({
     name: "", description: "", promoType: "percentage" as string, appliesTo: "order" as string,
     discountValue: "", couponCode: "", isVipOnly: false, isSingleUse: false,
-    expiresAt: "",
+    expiresAt: "", minOrders: "0", targetTag: "" as string,
   });
 
   const { data: promos = [], isLoading } = useQuery<Promotion[]>({ queryKey: ["/api/admin/promotions"] });
@@ -454,13 +454,15 @@ function PromotionsTab() {
       discountValue: form.discountValue || null,
       couponCode: form.couponCode || null,
       expiresAt: form.expiresAt || null,
+      minOrders: parseInt(form.minOrders) || 0,
+      targetTag: form.targetTag && form.targetTag !== "all" ? form.targetTag : null,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/promotions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Promotion Created" });
       setShowAdd(false);
-      setForm({ name: "", description: "", promoType: "percentage", appliesTo: "order", discountValue: "", couponCode: "", isVipOnly: false, isSingleUse: false, expiresAt: "" });
+      setForm({ name: "", description: "", promoType: "percentage", appliesTo: "order", discountValue: "", couponCode: "", isVipOnly: false, isSingleUse: false, expiresAt: "", minOrders: "0", targetTag: "" });
     },
   });
 
@@ -520,9 +522,27 @@ function PromotionsTab() {
               <Input value={form.couponCode} onChange={e => setForm({ ...form, couponCode: e.target.value })} placeholder="SUMMER10" data-testid="input-promo-code" />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Expires At (optional)</Label>
+              <Input type="date" value={form.expiresAt} onChange={e => setForm({ ...form, expiresAt: e.target.value })} data-testid="input-promo-expiry" />
+            </div>
+            <div>
+              <Label className="text-xs">Min. Orders Required</Label>
+              <Input type="number" min="0" value={form.minOrders} onChange={e => setForm({ ...form, minOrders: e.target.value })} placeholder="0" data-testid="input-promo-min-orders" />
+            </div>
+          </div>
           <div>
-            <Label className="text-xs">Expires At (optional)</Label>
-            <Input type="date" value={form.expiresAt} onChange={e => setForm({ ...form, expiresAt: e.target.value })} data-testid="input-promo-expiry" />
+            <Label className="text-xs">Target Customer Tag (optional)</Label>
+            <Select value={form.targetTag} onValueChange={v => setForm({ ...form, targetTag: v })}>
+              <SelectTrigger data-testid="select-promo-target-tag"><SelectValue placeholder="All Customers" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Customers</SelectItem>
+                <SelectItem value="VIP">VIP Only</SelectItem>
+                <SelectItem value="Frequent">Frequent Only</SelectItem>
+                <SelectItem value="Corporate">Corporate Only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-xs cursor-pointer">
@@ -557,9 +577,15 @@ function PromotionsTab() {
                   {promo.isVipOnly && <Badge variant="outline" className="text-[10px]">VIP</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground">{promo.description}</p>
-                <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
                   {promo.couponCode && (
                     <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{promo.couponCode}</span>
+                  )}
+                  {(promo.minOrders ?? 0) > 0 && (
+                    <Badge variant="outline" className="text-[10px]">Min {promo.minOrders} orders</Badge>
+                  )}
+                  {promo.targetTag && (
+                    <Badge variant="outline" className="text-[10px]">{promo.targetTag} only</Badge>
                   )}
                   {daysLeft !== null && daysLeft > 0 && (
                     <span className="text-xs text-primary font-medium">{daysLeft} Days</span>

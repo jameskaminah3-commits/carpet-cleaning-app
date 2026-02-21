@@ -2,7 +2,7 @@ import { db } from "./db";
 import { eq, and, desc, sql, isNull, ne } from "drizzle-orm";
 import {
   users, sessions, orders, orderItems, orderPhotos, pricingRules, deliveryZones,
-  mediaLibrary, deliveries, promotions, savedAddresses,
+  mediaLibrary, deliveries, promotions, savedAddresses, notifications,
   type User, type InsertUser,
   type PricingRule, type InsertPricingRule,
   type DeliveryZone, type InsertDeliveryZone,
@@ -13,6 +13,7 @@ import {
   type Delivery, type InsertDelivery,
   type Promotion, type InsertPromotion,
   type SavedAddress, type InsertSavedAddress,
+  type Notification, type InsertNotification,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -46,7 +47,7 @@ export interface IStorage {
   getUnassignedOrders(): Promise<(Order & { customer?: User })[]>;
   updateOrderStatus(id: string, status: string): Promise<void>;
   updateOrderLock(id: string, isLocked: boolean): Promise<void>;
-  updateOrderPrice(id: string, totalAmount: string): Promise<void>;
+  updateOrderPrice(id: string, totalAmount: string): Promise<Order>;
   assignTechnician(orderId: string, technicianId: string): Promise<void>;
 
   createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
@@ -69,6 +70,11 @@ export interface IStorage {
   getSavedAddresses(userId: string): Promise<SavedAddress[]>;
   createSavedAddress(address: InsertSavedAddress): Promise<SavedAddress>;
   deleteSavedAddress(id: string): Promise<void>;
+
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotificationsForUser(userId: string): Promise<Notification[]>;
+  markNotificationRead(id: string): Promise<void>;
+  getUnreadNotificationCount(userId: string): Promise<number>;
 
   getStats(): Promise<{
     totalUsers: number; totalOrders: number; scheduledDeliveries: number; activePromotions: number;
@@ -225,12 +231,16 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateOrderPrice(id: string, totalAmount: string): Promise<void> {
+  async updateOrderPrice(id: string, totalAmount: string): Promise<Order> {
     const order = await this.getOrder(id);
-    if (order) {
-      const balanceDue = (parseFloat(totalAmount) - parseFloat(order.depositPaid)).toString();
-      await db.update(orders).set({ totalAmount, balanceDue, updatedAt: new Date() }).where(eq(orders.id, id));
-    }
+    const depositPaid = order ? parseFloat(order.depositPaid) : 0;
+    const newBalance = Math.max(0, parseFloat(totalAmount) - depositPaid);
+    const [updated] = await db.update(orders).set({ 
+      totalAmount, 
+      balanceDue: String(newBalance),
+      updatedAt: new Date()
+    }).where(eq(orders.id, id)).returning();
+    return updated;
   }
 
   async assignTechnician(orderId: string, technicianId: string): Promise<void> {
@@ -293,10 +303,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPromotionsForUser(userId: string): Promise<Promotion[]> {
+    const user = await this.getUser(userId);
+    if (!user) return [];
     const all = await db.select().from(promotions).where(eq(promotions.isActive, true));
     return all.filter(p => {
       if (p.expiresAt && new Date() > p.expiresAt) return false;
       if (p.targetUserId && p.targetUserId !== userId) return false;
+      if (p.minOrders > 0 && user.totalOrders < p.minOrders) return false;
+      if (p.targetTag && p.targetTag !== user.tag) return false;
+      if (p.isVipOnly && user.tag !== "VIP") return false;
       return true;
     });
   }
@@ -326,6 +341,24 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSavedAddress(id: string): Promise<void> {
     await db.delete(savedAddresses).where(eq(savedAddresses.id, id));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(notification).returning();
+    return created;
+  }
+
+  async getNotificationsForUser(userId: string): Promise<Notification[]> {
+    return db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationRead(id: string): Promise<void> {
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, id));
+  }
+
+  async getUnreadNotificationCount(userId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)` }).from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return Number(result[0]?.count || 0);
   }
 
   async getStats() {
@@ -507,6 +540,7 @@ export class DatabaseStorage implements IStorage {
         appliesTo: "order",
         discountValue: "10",
         isActive: true,
+        minOrders: 3,
         expiresAt: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
       },
       {
@@ -516,6 +550,7 @@ export class DatabaseStorage implements IStorage {
         appliesTo: "delivery",
         isActive: true,
         freePickupThreshold: "5000",
+        minOrders: 0,
         expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       },
       {
@@ -526,6 +561,7 @@ export class DatabaseStorage implements IStorage {
         discountValue: "20",
         isVipOnly: true,
         isActive: true,
+        minOrders: 0,
       },
     ]);
 

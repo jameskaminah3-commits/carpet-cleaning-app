@@ -1,7 +1,7 @@
 # CarpetPro Executive
 
 ## Overview
-Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning company with three interfaces: Customer (mobile-first with bottom navigation), Technician (task management), and Admin (comprehensive operations dashboard with user management, delivery scheduling, promotions/coupon system, and customer tagging).
+Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning company with three interfaces: Customer (desktop-responsive with bottom navigation, functional notifications, M-Pesa payment flow, coupon redemption), Technician (task management), and Admin (comprehensive operations dashboard with user management, delivery scheduling, promotions/coupon system with eligibility rules, customer tagging, and price adjustment with payment request notifications).
 
 ## Tech Stack
 - **Frontend**: React + TypeScript + Vite + Wouter (routing) + TanStack Query + Framer Motion
@@ -37,6 +37,11 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - `DELETE /api/saved-addresses/:id` - Delete saved address
 - `GET /api/promotions/my` - Get available promotions for customer
 - `POST /api/promotions/validate` - Validate coupon code
+- `POST /api/promotions/apply` - Apply promotion to order
+- `GET /api/notifications` - Get user's notifications
+- `PATCH /api/notifications/:id/read` - Mark notification as read
+- `GET /api/notifications/unread-count` - Get unread notification count
+- `POST /api/payments/stk-push` - Simulate M-Pesa STK push payment
 
 ### Admin
 - `GET /api/admin/orders` - All orders (with customer data)
@@ -82,8 +87,9 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - **order_photos** (id, orderId, fileKey, photoType, uploadedAt)
 - **media_library** (id, title, fileKey, mimeType, category, uploadedAt)
 - **deliveries** (id, orderId, technicianId, deliveryType, status, scheduledDate, scheduledTimeWindow, completedAt, notes, createdAt)
-- **promotions** (id, name, description, promoType, appliesTo, discountValue, couponCode, isVipOnly, isSingleUse, isActive, expiresAt, createdAt)
+- **promotions** (id, name, description, promoType, appliesTo, discountValue, couponCode, isVipOnly, isSingleUse, isActive, expiresAt, minOrders, targetTag, createdAt)
 - **saved_addresses** (id, userId, label, address, lat, lng, isDefault, createdAt)
+- **notifications** (id, userId, type, title, message, orderId, amount, isRead, createdAt)
 
 ## Customer Tags
 - VIP (purple badge), Frequent (blue badge), Corporate (green badge), One-time (gray badge)

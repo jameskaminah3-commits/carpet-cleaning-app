@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, ArrowLeft, ArrowRight, Plus, X, MapPin, Camera, Loader2, CheckCircle2, Calculator } from "lucide-react";
+import { Sparkles, ArrowLeft, ArrowRight, Plus, X, MapPin, Camera, Loader2, CheckCircle2, Calculator, Tag, Gift } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { CARPET_TYPES } from "@shared/schema";
-import type { PricingRule, DeliveryZone, User } from "@shared/schema";
+import type { PricingRule, DeliveryZone, User, Promotion } from "@shared/schema";
 
 interface CarpetItem {
   carpetType: string;
@@ -51,6 +51,9 @@ export default function BookingPage() {
   const [locationName, setLocationName] = useState("");
   const [notes, setNotes] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<Promotion | null>(null);
+  const [couponError, setCouponError] = useState("");
 
   const { data: user } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
@@ -64,6 +67,37 @@ export default function BookingPage() {
   const { data: zones = [] } = useQuery<DeliveryZone[]>({
     queryKey: ["/api/delivery-zones"],
   });
+
+  const validateCoupon = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/promotions/validate", { code: couponCode.trim() });
+      return res.json();
+    },
+    onSuccess: (promo: Promotion) => {
+      setAppliedPromo(promo);
+      setCouponError("");
+      toast({ title: "Coupon Applied!", description: promo.description || promo.name });
+    },
+    onError: (err: Error) => {
+      setCouponError(err.message || "Invalid coupon code");
+      setAppliedPromo(null);
+    },
+  });
+
+  const getDiscount = () => {
+    if (!appliedPromo) return 0;
+    const subtotal = itemsTotal;
+    if (appliedPromo.promoType === "percentage" && appliedPromo.discountValue) {
+      return Math.round(subtotal * (parseFloat(appliedPromo.discountValue) / 100));
+    }
+    if (appliedPromo.promoType === "fixed" && appliedPromo.discountValue) {
+      return Math.min(parseFloat(appliedPromo.discountValue), subtotal);
+    }
+    if (appliedPromo.promoType === "free_pickup" || appliedPromo.promoType === "free_delivery") {
+      return deliveryFee;
+    }
+    return 0;
+  };
 
   const createOrder = useMutation({
     mutationFn: async () => {
@@ -82,8 +116,9 @@ export default function BookingPage() {
 
       const totalAmount = orderItems.reduce((sum, i) => sum + i.subtotal, 0);
       const zone = zones.find((z) => z.id === selectedZone);
-      const deliveryFee = zone ? parseFloat(zone.fee) : 0;
-      const grandTotal = totalAmount + deliveryFee;
+      const zoneFee = zone ? parseFloat(zone.fee) : 0;
+      const discount = getDiscount();
+      const grandTotal = Math.max(0, totalAmount + zoneFee - discount);
 
       const res = await apiRequest("POST", "/api/orders", {
         items: orderItems,
@@ -92,6 +127,9 @@ export default function BookingPage() {
         locationName,
         notes,
         totalAmount: grandTotal,
+        promotionId: appliedPromo?.id || undefined,
+        discountAmount: discount,
+        deliveryFee: zoneFee,
       });
       return res.json();
     },
@@ -469,6 +507,49 @@ export default function BookingPage() {
                     );
                   })}
 
+                  <div className="border-t pt-3 mt-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Tag className="w-4 h-4 text-muted-foreground" />
+                      <Label className="text-xs font-medium">Have a coupon?</Label>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={couponCode}
+                        onChange={e => { setCouponCode(e.target.value); setCouponError(""); }}
+                        placeholder="Enter coupon code"
+                        disabled={!!appliedPromo}
+                        className="flex-1"
+                        data-testid="input-coupon-code"
+                      />
+                      {appliedPromo ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setAppliedPromo(null); setCouponCode(""); }}
+                          data-testid="button-remove-coupon"
+                        >
+                          <X className="w-3 h-3 mr-1" /> Remove
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => validateCoupon.mutate()}
+                          disabled={!couponCode.trim() || validateCoupon.isPending}
+                          data-testid="button-apply-coupon"
+                        >
+                          {validateCoupon.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Apply"}
+                        </Button>
+                      )}
+                    </div>
+                    {couponError && <p className="text-xs text-destructive mt-1" data-testid="text-coupon-error">{couponError}</p>}
+                    {appliedPromo && (
+                      <div className="flex items-center gap-2 mt-2 bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
+                        <Gift className="w-4 h-4 text-green-600" />
+                        <span className="text-xs font-medium text-green-700 dark:text-green-400">{appliedPromo.name} applied!</span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="border-t pt-2 space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Cleaning</span>
@@ -480,10 +561,16 @@ export default function BookingPage() {
                         <span>KES {deliveryFee.toLocaleString()}</span>
                       </div>
                     )}
+                    {appliedPromo && getDiscount() > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Discount ({appliedPromo.name})</span>
+                        <span>-KES {getDiscount().toLocaleString()}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between pt-2 border-t">
                       <p className="font-bold">Estimated Total</p>
                       <p className="font-bold text-xl text-primary" data-testid="text-total">
-                        KES {getEstimate().toLocaleString()}
+                        KES {Math.max(0, getEstimate() - getDiscount()).toLocaleString()}
                       </p>
                     </div>
                   </div>
