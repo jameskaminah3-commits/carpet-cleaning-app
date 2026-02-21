@@ -675,6 +675,191 @@ export async function registerRoutes(
     }
   });
 
+  // Reviews
+  app.post("/api/reviews", authMiddleware, async (req, res) => {
+    try {
+      const { orderId, rating, comment } = req.body;
+      if (!orderId || !rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: "Order ID and rating (1-5) are required" });
+      }
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.customerId !== req.userId) return res.status(403).json({ message: "Access denied" });
+      if (order.status !== "COMPLETED") return res.status(400).json({ message: "Can only review completed orders" });
+      const existing = await storage.getReviewsByOrder(orderId);
+      if (existing.length > 0) return res.status(400).json({ message: "You have already reviewed this order" });
+      const review = await storage.createReview({
+        orderId,
+        customerId: req.userId!,
+        rating,
+        comment: comment || null,
+        isPublic: true,
+      });
+      res.json(review);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/reviews/public", async (_req, res) => {
+    const publicReviews = await storage.getPublicReviews();
+    res.json(publicReviews);
+  });
+
+  // Order photos upload
+  app.post("/api/orders/:id/photos", authMiddleware, async (req, res) => {
+    try {
+      const order = await storage.getOrder(paramId(req));
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      const { fileKey, photoType } = req.body;
+      if (!fileKey) return res.status(400).json({ message: "fileKey is required" });
+      const photo = await storage.createOrderPhoto({
+        orderId: order.id,
+        fileKey,
+        photoType: photoType || "before",
+      });
+      res.json(photo);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/orders/:id/photos", authMiddleware, async (req, res) => {
+    const photos = await storage.getOrderPhotos(paramId(req));
+    res.json(photos);
+  });
+
+  // Admin - Extended routes
+  app.get("/api/admin/users/all", authMiddleware, adminMiddleware, async (_req, res) => {
+    const allUsers = await storage.getAllUsers();
+    res.json(allUsers);
+  });
+
+  app.post("/api/admin/users", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const { phone, name, role, email, tag } = req.body;
+      if (!phone || !name) return res.status(400).json({ message: "Phone and name are required" });
+      const parsed = loginSchema.safeParse({ phone });
+      if (!parsed.success) return res.status(400).json({ message: "Invalid phone number" });
+      const existing = await storage.getUserByPhone(parsed.data.phone);
+      if (existing) return res.status(400).json({ message: "User with this phone already exists" });
+      const user = await storage.createUser({
+        phone: parsed.data.phone,
+        name,
+        role: role || "customer",
+        email: email || undefined,
+      });
+      if (tag) await storage.updateUserTag(user.id, tag);
+      res.json(user);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      await storage.deleteUser(paramId(req));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/pricing/:id", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const updated = await storage.updatePricingRule(paramId(req), req.body);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Admin - Media/CMS
+  app.get("/api/admin/media", authMiddleware, adminMiddleware, async (_req, res) => {
+    const media = await storage.getMediaLibrary();
+    res.json(media);
+  });
+
+  app.post("/api/admin/media", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const { title, fileKey, mimeType, category } = req.body;
+      if (!title || !fileKey || !mimeType) return res.status(400).json({ message: "Title, fileKey, and mimeType are required" });
+      const media = await storage.createMedia({ title, fileKey, mimeType, category: category || "general" });
+      res.json(media);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/media/:id/public", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const updated = await storage.updateMediaPublic(paramId(req), req.body.isPublic ?? true);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete("/api/admin/media/:id", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      await storage.deleteMedia(paramId(req));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Admin - Extended stats with revenue, active jobs, top carpet types
+  app.get("/api/admin/stats/extended", authMiddleware, adminMiddleware, async (_req, res) => {
+    try {
+      const stats = await storage.getStats();
+      const allOrders = await storage.getAllOrders();
+      const allItems = [];
+      for (const order of allOrders) {
+        const items = await storage.getOrderItems(order.id);
+        allItems.push(...items);
+      }
+      const carpetTypeCounts: Record<string, number> = {};
+      for (const item of allItems) {
+        carpetTypeCounts[item.carpetType] = (carpetTypeCounts[item.carpetType] || 0) + (item.quantity || 1);
+      }
+      const topCarpetTypes = Object.entries(carpetTypeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([type, count]) => ({ type, count }));
+      const activeJobs = allOrders.filter(o => !["PENDING", "COMPLETED"].includes(o.status)).length;
+      res.json({ ...stats, activeJobs, topCarpetTypes });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // File upload endpoint for photos/media
+  app.post("/api/upload", authMiddleware, async (req, res) => {
+    try {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk) => chunks.push(chunk));
+      req.on("end", async () => {
+        const buffer = Buffer.concat(chunks);
+        const contentType = req.headers["content-type"] || "application/octet-stream";
+        const ext = contentType.includes("png") ? ".png" : contentType.includes("jpeg") || contentType.includes("jpg") ? ".jpg" : contentType.includes("webp") ? ".webp" : contentType.includes("mp4") ? ".mp4" : ".bin";
+        const filename = `upload_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
+        const fs = await import("fs");
+        const path = await import("path");
+        const uploadDir = path.join(process.cwd(), "uploads");
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        const filePath = path.join(uploadDir, filename);
+        fs.writeFileSync(filePath, buffer);
+        res.json({ fileKey: `/uploads/${filename}`, filename });
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Serve uploaded files
+  app.use("/uploads", (await import("express")).static("uploads"));
+
   // Technician routes
   app.get("/api/technician/tasks", authMiddleware, techMiddleware, async (req, res) => {
     const tasks = await storage.getOrdersByTechnician(req.userId!);

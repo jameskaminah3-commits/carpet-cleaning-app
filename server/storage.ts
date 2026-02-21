@@ -2,7 +2,7 @@ import { db } from "./db";
 import { eq, and, desc, sql, isNull, ne } from "drizzle-orm";
 import {
   users, sessions, orders, orderItems, orderPhotos, pricingRules, deliveryZones,
-  mediaLibrary, deliveries, promotions, savedAddresses, notifications,
+  mediaLibrary, deliveries, promotions, savedAddresses, notifications, reviews,
   type User, type InsertUser,
   type PricingRule, type InsertPricingRule,
   type DeliveryZone, type InsertDeliveryZone,
@@ -14,6 +14,7 @@ import {
   type Promotion, type InsertPromotion,
   type SavedAddress, type InsertSavedAddress,
   type Notification, type InsertNotification,
+  type Review, type InsertReview,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -75,6 +76,19 @@ export interface IStorage {
   getNotificationsForUser(userId: string): Promise<Notification[]>;
   markNotificationRead(id: string): Promise<void>;
   getUnreadNotificationCount(userId: string): Promise<number>;
+
+  createReview(review: InsertReview): Promise<Review>;
+  getReviewsByOrder(orderId: string): Promise<Review[]>;
+  getPublicReviews(): Promise<(Review & { customer?: User })[]>;
+  getAllUsers(): Promise<User[]>;
+  deleteUser(id: string): Promise<void>;
+  updatePricingRule(id: string, data: Partial<{ name: string; pricePerSqMeter: string; description: string; carpetType: string; isActive: boolean }>): Promise<PricingRule>;
+  getOrderPhotos(orderId: string): Promise<OrderPhoto[]>;
+  createOrderPhoto(photo: InsertOrderPhoto): Promise<OrderPhoto>;
+  getMediaLibrary(): Promise<Media[]>;
+  createMedia(media: InsertMedia): Promise<Media>;
+  updateMediaPublic(id: string, isPublic: boolean): Promise<Media>;
+  deleteMedia(id: string): Promise<void>;
 
   getStats(): Promise<{
     totalUsers: number; totalOrders: number; scheduledDeliveries: number; activePromotions: number;
@@ -359,6 +373,65 @@ export class DatabaseStorage implements IStorage {
   async getUnreadNotificationCount(userId: string): Promise<number> {
     const result = await db.select({ count: sql<number>`count(*)` }).from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
     return Number(result[0]?.count || 0);
+  }
+
+  async createReview(review: InsertReview): Promise<Review> {
+    const [created] = await db.insert(reviews).values(review).returning();
+    return created;
+  }
+
+  async getReviewsByOrder(orderId: string): Promise<Review[]> {
+    return db.select().from(reviews).where(eq(reviews.orderId, orderId));
+  }
+
+  async getPublicReviews(): Promise<(Review & { customer?: User })[]> {
+    const allReviews = await db.select().from(reviews).where(eq(reviews.isPublic, true)).orderBy(desc(reviews.createdAt));
+    const result: (Review & { customer?: User })[] = [];
+    for (const review of allReviews) {
+      const [customer] = await db.select().from(users).where(eq(users.id, review.customerId));
+      result.push({ ...review, customer });
+    }
+    return result;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.update(users).set({ isActive: false }).where(eq(users.id, id));
+  }
+
+  async updatePricingRule(id: string, data: Partial<{ name: string; pricePerSqMeter: string; description: string; carpetType: string; isActive: boolean }>): Promise<PricingRule> {
+    const [updated] = await db.update(pricingRules).set(data).where(eq(pricingRules.id, id)).returning();
+    return updated;
+  }
+
+  async getOrderPhotos(orderId: string): Promise<OrderPhoto[]> {
+    return db.select().from(orderPhotos).where(eq(orderPhotos.orderId, orderId));
+  }
+
+  async createOrderPhoto(photo: InsertOrderPhoto): Promise<OrderPhoto> {
+    const [created] = await db.insert(orderPhotos).values(photo).returning();
+    return created;
+  }
+
+  async getMediaLibrary(): Promise<Media[]> {
+    return db.select().from(mediaLibrary).orderBy(desc(mediaLibrary.uploadedAt));
+  }
+
+  async createMedia(media: InsertMedia): Promise<Media> {
+    const [created] = await db.insert(mediaLibrary).values(media).returning();
+    return created;
+  }
+
+  async updateMediaPublic(id: string, isPublic: boolean): Promise<Media> {
+    const [updated] = await db.update(mediaLibrary).set({ category: isPublic ? "public" : "general" }).where(eq(mediaLibrary.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMedia(id: string): Promise<void> {
+    await db.delete(mediaLibrary).where(eq(mediaLibrary.id, id));
   }
 
   async getStats() {

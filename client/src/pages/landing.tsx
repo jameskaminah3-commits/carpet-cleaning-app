@@ -9,6 +9,8 @@ import {
   MessageCircle
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import type { Review, User } from "@shared/schema";
 
 const PHONE_NUMBER = "0707255598";
 const WHATSAPP_LINK = `https://wa.me/254707255598?text=${encodeURIComponent("Hi CarpetPro! I'd like to get a free estimate for carpet cleaning.")}`;
@@ -303,14 +305,25 @@ function BeforeAfterGallery() {
 function TestimonialsCarousel() {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const { data: publicReviews = [] } = useQuery<(Review & { customer?: User })[]>({ queryKey: ["/api/reviews/public"] });
+
+  const allTestimonials = useMemo(() => {
+    const real = publicReviews.map(r => ({
+      name: r.customer?.name || "Customer",
+      location: "Nairobi",
+      text: r.comment || "Great service!",
+      rating: r.rating,
+    }));
+    return [...real, ...testimonials];
+  }, [publicReviews]);
 
   const next = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % testimonials.length);
-  }, []);
+    setCurrent((prev) => (prev + 1) % allTestimonials.length);
+  }, [allTestimonials.length]);
 
   const prev = useCallback(() => {
-    setCurrent((prev) => (prev - 1 + testimonials.length) % testimonials.length);
-  }, []);
+    setCurrent((prev) => (prev - 1 + allTestimonials.length) % allTestimonials.length);
+  }, [allTestimonials.length]);
 
   useEffect(() => {
     if (isPaused) return;
@@ -321,7 +334,7 @@ function TestimonialsCarousel() {
   const getVisibleIndices = () => {
     const indices = [];
     for (let i = -1; i <= 1; i++) {
-      indices.push((current + i + testimonials.length) % testimonials.length);
+      indices.push((current + i + allTestimonials.length) % allTestimonials.length);
     }
     return indices;
   };
@@ -344,7 +357,7 @@ function TestimonialsCarousel() {
           <div className="hidden md:grid grid-cols-3 gap-6">
             <AnimatePresence mode="popLayout">
               {visible.map((idx, pos) => {
-                const t = testimonials[idx];
+                const t = allTestimonials[idx];
                 return (
                   <motion.div
                     key={`${t.name}-${idx}`}
@@ -382,14 +395,14 @@ function TestimonialsCarousel() {
               >
                 <Card className="p-6">
                   <div className="flex gap-1 mb-4">
-                    {Array.from({ length: testimonials[current].rating }).map((_, i) => (
+                    {Array.from({ length: allTestimonials[current]?.rating || 5 }).map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
-                  <p className="text-sm leading-relaxed mb-4 text-muted-foreground italic">"{testimonials[current].text}"</p>
+                  <p className="text-sm leading-relaxed mb-4 text-muted-foreground italic">"{allTestimonials[current]?.text}"</p>
                   <div>
-                    <p className="font-semibold text-sm">{testimonials[current].name}</p>
-                    <p className="text-xs text-muted-foreground">{testimonials[current].location}</p>
+                    <p className="font-semibold text-sm">{allTestimonials[current]?.name}</p>
+                    <p className="text-xs text-muted-foreground">{allTestimonials[current]?.location}</p>
                   </div>
                 </Card>
               </motion.div>
@@ -406,7 +419,7 @@ function TestimonialsCarousel() {
               <ChevronRight className="w-4 h-4 rotate-180" />
             </button>
             <div className="flex gap-2">
-              {testimonials.map((_, i) => (
+              {allTestimonials.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrent(i)}

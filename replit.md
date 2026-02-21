@@ -15,7 +15,7 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - `/login` - Phone OTP login
 - `/book` - Booking flow (multi-step)
 - `/customer` - Customer dashboard (mobile-first, bottom nav: Home/Orders/Offers/Profile)
-- `/admin` - Admin dashboard (5 tabs: Orders/Deliveries/Users/Pricing & Zones/Promotions)
+- `/admin` - Admin dashboard (6 tabs: Orders/Deliveries/Users/Pricing & Zones/Promotions/Media CMS)
 - `/technician` - Technician task list
 
 ## API Endpoints
@@ -62,6 +62,26 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - `POST /api/admin/promotions` - Create promotion/coupon
 - `DELETE /api/admin/promotions/:id` - Delete promotion
 
+### Reviews
+- `POST /api/reviews` - Submit a review for a completed order
+- `GET /api/reviews/public` - Get all public reviews (with customer names)
+
+### Photos & Media
+- `POST /api/orders/:id/photos` - Add photo to order
+- `GET /api/orders/:id/photos` - Get order photos
+- `POST /api/upload` - Upload file (returns fileKey)
+- `GET /api/admin/media` - Get all media library items
+- `POST /api/admin/media` - Create media entry
+- `PATCH /api/admin/media/:id/public` - Toggle media public visibility
+- `DELETE /api/admin/media/:id` - Delete media
+
+### Extended Admin
+- `GET /api/admin/users/all` - Get all users (all roles)
+- `POST /api/admin/users` - Create new user
+- `DELETE /api/admin/users/:id` - Deactivate/ban user
+- `PATCH /api/admin/pricing/:id` - Update pricing rule
+- `GET /api/admin/stats/extended` - Extended stats (revenue, active jobs, top carpet types)
+
 ### Technician
 - `GET /api/technician/tasks` - Get technician tasks
 - `PATCH /api/technician/tasks/:id/complete` - Complete task
@@ -90,6 +110,7 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - **promotions** (id, name, description, promoType, appliesTo, discountValue, couponCode, isVipOnly, isSingleUse, isActive, expiresAt, minOrders, targetTag, createdAt)
 - **saved_addresses** (id, userId, label, address, lat, lng, isDefault, createdAt)
 - **notifications** (id, userId, type, title, message, orderId, amount, isRead, createdAt)
+- **reviews** (id, orderId, customerId, rating, comment, isPublic, createdAt)
 
 ## Customer Tags
 - VIP (purple badge), Frequent (blue badge), Corporate (green badge), One-time (gray badge)

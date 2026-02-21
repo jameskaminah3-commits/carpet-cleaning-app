@@ -131,7 +131,29 @@ export default function BookingPage() {
         discountAmount: discount,
         deliveryFee: zoneFee,
       });
-      return res.json();
+      const order = await res.json();
+      if (photos.length > 0 && order?.id) {
+        for (const photo of photos) {
+          try {
+            const uploadRes = await fetch("/api/upload", {
+              method: "POST",
+              headers: { "Content-Type": photo.type },
+              body: photo,
+              credentials: "include",
+            });
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              await apiRequest("POST", `/api/orders/${order.id}/photos`, {
+                fileKey: uploadData.fileKey,
+                photoType: "before",
+              });
+            }
+          } catch (e) {
+            console.error("Photo upload failed:", e);
+          }
+        }
+      }
+      return order;
     },
     onSuccess: () => {
       toast({ title: "Order Created!", description: "Your booking has been submitted successfully." });

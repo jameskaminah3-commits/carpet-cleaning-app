@@ -10,13 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   Sparkles, Home, Package, Tag, UserCircle, ChevronRight, MapPin,
   Plus, Edit3, Clock, CheckCircle2, Bell, Phone, Loader2, X,
-  CreditCard, AlertCircle, Gift, Shield
+  CreditCard, AlertCircle, Gift, Shield, Star
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { ORDER_STATUSES, TAG_COLORS } from "@shared/schema";
-import type { Order, OrderItem, User, Promotion, SavedAddress, Notification } from "@shared/schema";
+import type { Order, OrderItem, User, Promotion, SavedAddress, Notification, Review } from "@shared/schema";
 
 const fadeUp = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } };
 
@@ -429,6 +431,8 @@ function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) 
   const activeOrders = orders.filter(o => o.status !== "COMPLETED");
   const completedOrders = orders.filter(o => o.status === "COMPLETED");
   const [payOrder, setPayOrder] = useState<Order | null>(null);
+  const [reviewOrder, setReviewOrder] = useState<(Order & { items?: OrderItem[] }) | null>(null);
+  const { data: existingReviews = [] } = useQuery<Review[]>({ queryKey: ["/api/reviews/public"] });
 
   return (
     <div className="space-y-5">
@@ -499,24 +503,33 @@ function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) 
             <CheckCircle2 className="w-4 h-4" /> Completed ({completedOrders.length})
           </h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {completedOrders.map(order => (
-              <Card key={order.id} className="p-4 opacity-75" data-testid={`card-order-completed-${order.id}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Order #{order.id.slice(0, 8)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {order.items?.[0]?.description || order.items?.[0]?.carpetType} &middot; {new Date(order.createdAt).toLocaleDateString("en-KE", { month: "short", day: "numeric" })}
-                    </p>
+            {completedOrders.map(order => {
+              const hasReview = existingReviews.some((r: any) => r.orderId === order.id);
+              return (
+                <Card key={order.id} className="p-4 opacity-90" data-testid={`card-order-completed-${order.id}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Order #{order.id.slice(0, 8)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {order.items?.[0]?.description || order.items?.[0]?.carpetType} &middot; {new Date(order.createdAt).toLocaleDateString("en-KE", { month: "short", day: "numeric" })}
+                      </p>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="text-sm font-semibold">KES {parseFloat(order.totalAmount).toLocaleString()}</p>
+                      {hasReview ? (
+                        <Badge variant="secondary" className="text-[10px]">
+                          <Star className="w-2.5 h-2.5 mr-1 fill-amber-400 text-amber-400" /> Reviewed
+                        </Badge>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => setReviewOrder(order)} data-testid={`button-review-${order.id}`}>
+                          <Star className="w-3 h-3 mr-1" /> Rate
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">KES {parseFloat(order.totalAmount).toLocaleString()}</p>
-                    <Badge variant="secondary" className="text-[10px]">
-                      <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> Paid
-                    </Badge>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
@@ -532,7 +545,77 @@ function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) 
       )}
 
       <PaymentModal open={!!payOrder} onClose={() => setPayOrder(null)} order={payOrder} />
+      <ReviewDialog open={!!reviewOrder} onClose={() => setReviewOrder(null)} order={reviewOrder} />
     </div>
+  );
+}
+
+function ReviewDialog({ open, onClose, order }: { open: boolean; onClose: () => void; order: (Order & { items?: OrderItem[] }) | null }) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState("");
+  const { toast } = useToast();
+
+  const submitReview = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/reviews", { orderId: order?.id, rating, comment }),
+    onSuccess: () => {
+      toast({ title: "Thank you!", description: "Your review has been submitted." });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/my"] });
+      setRating(0);
+      setComment("");
+      onClose();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to submit review", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-serif">Rate Your Experience</DialogTitle>
+        </DialogHeader>
+        {order && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Order #{order.id.slice(0, 8)}</p>
+            <div className="flex items-center gap-1 justify-center" data-testid="rating-stars">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  type="button"
+                  className="p-1 transition-transform hover:scale-110"
+                  onMouseEnter={() => setHover(star)}
+                  onMouseLeave={() => setHover(0)}
+                  onClick={() => setRating(star)}
+                  data-testid={`star-${star}`}
+                >
+                  <Star
+                    className={`w-8 h-8 ${(hover || rating) >= star ? "fill-amber-400 text-amber-400" : "text-gray-300"}`}
+                  />
+                </button>
+              ))}
+            </div>
+            <Textarea
+              placeholder="Tell us about your experience (optional)"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              className="min-h-[80px]"
+              data-testid="input-review-comment"
+            />
+            <Button
+              className="w-full"
+              disabled={rating === 0 || submitReview.isPending}
+              onClick={() => submitReview.mutate()}
+              data-testid="button-submit-review"
+            >
+              {submitReview.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Submit Review
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

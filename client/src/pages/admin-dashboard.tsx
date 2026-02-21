@@ -5,26 +5,184 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sparkles, LogOut, Package, DollarSign, MapPin, Users, Clock, Truck,
   Plus, Trash2, Lock, Unlock, Loader2, Bell, Tag, Eye,
-  ChevronRight, UserCheck, UserX, CheckCircle2, XCircle, Calendar
+  ChevronRight, UserCheck, UserX, CheckCircle2, XCircle, Calendar,
+  TrendingUp, Briefcase, BarChart3, Image, Upload, ToggleLeft, ToggleRight,
+  Star, Edit3, X, Phone, Mail, Camera
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ORDER_STATUSES, CARPET_TYPES, TAG_COLORS } from "@shared/schema";
-import type { Order, PricingRule, DeliveryZone, User, Delivery, Promotion } from "@shared/schema";
+import type { Order, OrderItem, OrderPhoto, PricingRule, DeliveryZone, User, Delivery, Promotion, Notification, Media } from "@shared/schema";
 
 const fadeUp = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
 
+function AdminNotificationsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    enabled: open,
+  });
+
+  const markRead = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/notifications/${id}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+    },
+  });
+
+  if (!open) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-serif flex items-center gap-2">
+            <Bell className="w-5 h-5" /> Notifications
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          {notifications.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">No notifications</p>
+          )}
+          {notifications.map(notif => (
+            <div
+              key={notif.id}
+              className={`p-3 rounded-lg border text-sm ${notif.isRead ? "bg-muted/30" : "bg-primary/5 border-primary/20"}`}
+              data-testid={`notif-admin-${notif.id}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{notif.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {new Date(notif.createdAt).toLocaleString("en-KE")}
+                  </p>
+                </div>
+                {!notif.isRead && (
+                  <Button size="sm" variant="ghost" className="h-6 text-[10px] shrink-0" onClick={() => markRead.mutate(notif.id)}>
+                    Mark read
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function OrderDetailDialog({ open, onClose, order }: { open: boolean; onClose: () => void; order: (Order & { customer?: User }) | null }) {
+  const { toast } = useToast();
+  const [newPrice, setNewPrice] = useState("");
+
+  const { data: photos = [] } = useQuery<OrderPhoto[]>({
+    queryKey: ["/api/orders", order?.id, "photos"],
+    queryFn: () => fetch(`/api/orders/${order?.id}/photos`, { credentials: "include" }).then(r => r.json()),
+    enabled: !!order?.id && open,
+  });
+
+  const { data: items = [] } = useQuery<OrderItem[]>({
+    queryKey: ["/api/orders", order?.id, "items"],
+    queryFn: () => fetch(`/api/orders/${order?.id}`, { credentials: "include" }).then(r => r.json()).then(d => d.items || []),
+    enabled: !!order?.id && open,
+  });
+
+  const adjustPrice = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/admin/orders/${order?.id}/price`, { totalAmount: newPrice }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      toast({ title: "Price adjusted", description: "Customer has been notified of updated balance." });
+      setNewPrice("");
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  if (!order) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-serif">Order #{order.id.slice(0, 8)}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-white text-sm font-bold">
+              {order.customer?.name?.charAt(0) || "?"}
+            </div>
+            <div>
+              <p className="font-semibold text-sm">{order.customer?.name}</p>
+              <p className="text-xs text-muted-foreground">{order.customer?.phone}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div><span className="text-muted-foreground">Total:</span> <span className="font-bold">KES {parseFloat(order.totalAmount).toLocaleString()}</span></div>
+            <div><span className="text-muted-foreground">Balance Due:</span> <span className="font-bold text-red-600">KES {parseFloat(order.balanceDue).toLocaleString()}</span></div>
+            <div><span className="text-muted-foreground">Deposit:</span> KES {parseFloat(order.depositPaid).toLocaleString()}</div>
+            <div><span className="text-muted-foreground">Status:</span> {order.status}</div>
+            {order.locationName && <div className="col-span-2"><span className="text-muted-foreground">Location:</span> {order.locationName}</div>}
+            {order.notes && <div className="col-span-2"><span className="text-muted-foreground">Notes:</span> {order.notes}</div>}
+          </div>
+
+          {photos.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-1"><Camera className="w-4 h-4" /> Customer Photos</h4>
+              <div className="grid grid-cols-3 gap-2">
+                {photos.map(photo => (
+                  <div key={photo.id} className="aspect-square rounded-lg overflow-hidden border bg-muted">
+                    <img src={photo.fileKey} alt={photo.photoType} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="border-t pt-3">
+            <h4 className="text-sm font-semibold mb-2">Adjust Price</h4>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="New total (KES)"
+                value={newPrice}
+                onChange={e => setNewPrice(e.target.value)}
+                className="flex-1"
+                data-testid="input-adjust-price"
+              />
+              <Button
+                size="sm"
+                disabled={!newPrice || isNaN(parseFloat(newPrice)) || parseFloat(newPrice) < 0 || adjustPrice.isPending}
+                onClick={() => adjustPrice.mutate()}
+                data-testid="button-adjust-price"
+              >
+                {adjustPrice.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                Update
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">This will update the balance due and notify the customer.</p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function OrdersTab() {
   const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [selectedOrder, setSelectedOrder] = useState<(Order & { customer?: User }) | null>(null);
+
   const { data: orders = [], isLoading } = useQuery<(Order & { customer?: User })[]>({
     queryKey: ["/api/admin/orders"],
   });
@@ -52,16 +210,25 @@ function OrdersTab() {
 
   if (isLoading) return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>;
 
+  const filtered = statusFilter === "ALL" ? orders : orders.filter(o => o.status === statusFilter);
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-        <span className="font-medium">Orders</span>
-        <span>|</span>
-        <span>Deliveries</span>
-        <span>|</span>
-        <span>{orders.length} total</span>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1" data-testid="order-status-filters">
+        <Button size="sm" variant={statusFilter === "ALL" ? "default" : "outline"} className="h-7 text-xs shrink-0" onClick={() => setStatusFilter("ALL")} data-testid="filter-all">
+          All ({orders.length})
+        </Button>
+        {ORDER_STATUSES.map(s => {
+          const count = orders.filter(o => o.status === s.value).length;
+          return (
+            <Button key={s.value} size="sm" variant={statusFilter === s.value ? "default" : "outline"} className="h-7 text-xs shrink-0" onClick={() => setStatusFilter(s.value)} data-testid={`filter-${s.value}`}>
+              {s.label} ({count})
+            </Button>
+          );
+        })}
       </div>
-      {orders.map(order => {
+
+      {filtered.map(order => {
         const statusInfo = ORDER_STATUSES.find(s => s.value === order.status) || ORDER_STATUSES[0];
         const customer = order.customer;
         return (
@@ -103,23 +270,15 @@ function OrdersTab() {
                 {order.isLocked ? <Unlock className="w-3 h-3 mr-1" /> : <Lock className="w-3 h-3 mr-1" />}
                 {order.isLocked ? "Unlock" : "Lock"}
               </Button>
-              {order.status === "READY" && (
-                <Button size="sm" className="h-7 text-xs" onClick={() => updateStatus.mutate({ id: order.id, status: "COMPLETED" })} data-testid={`button-mark-delivered-${order.id}`}>
-                  Mark Delivered
-                </Button>
-              )}
-              {parseFloat(order.balanceDue) > 0 && (
-                <Button size="sm" variant="secondary" className="h-7 text-xs" data-testid={`button-complete-payment-${order.id}`}>
-                  Complete Payment
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" className="h-7 text-xs ml-auto" data-testid={`button-view-details-${order.id}`}>
-                View Details
+              <Button variant="ghost" size="sm" className="h-7 text-xs ml-auto" onClick={() => setSelectedOrder(order)} data-testid={`button-view-details-${order.id}`}>
+                <Eye className="w-3 h-3 mr-1" /> Details
               </Button>
             </div>
           </Card>
         );
       })}
+
+      <OrderDetailDialog open={!!selectedOrder} onClose={() => setSelectedOrder(null)} order={selectedOrder} />
     </div>
   );
 }
@@ -205,6 +364,9 @@ function DeliveriesTab() {
 
 function UsersTab() {
   const { toast } = useToast();
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [userForm, setUserForm] = useState({ name: "", phone: "", email: "", role: "customer", tag: "" });
+
   const { data: customers = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
   });
@@ -229,29 +391,91 @@ function UsersTab() {
     },
   });
 
+  const addUser = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/users", userForm),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "User Created" });
+      setShowAddUser(false);
+      setUserForm({ name: "", phone: "", email: "", role: "customer", tag: "" });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "User deactivated" });
+    },
+  });
+
   if (isLoading) return <div className="space-y-3">{[1, 2].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>;
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-sm">Customers ({customers.length})</h3>
+        <h3 className="font-semibold text-sm">Users ({customers.length})</h3>
+        <Button size="sm" onClick={() => setShowAddUser(!showAddUser)} data-testid="button-add-user">
+          <Plus className="w-3 h-3 mr-1" /> Add User
+        </Button>
       </div>
+
+      {showAddUser && (
+        <Card className="p-4 space-y-3 mb-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Name</Label>
+              <Input value={userForm.name} onChange={e => setUserForm({ ...userForm, name: e.target.value })} placeholder="Full Name" data-testid="input-user-name" />
+            </div>
+            <div>
+              <Label className="text-xs">Phone</Label>
+              <Input value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} placeholder="07XX XXX XXX" data-testid="input-user-phone" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Email (optional)</Label>
+              <Input value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} placeholder="email@example.com" data-testid="input-user-email" />
+            </div>
+            <div>
+              <Label className="text-xs">Role</Label>
+              <Select value={userForm.role} onValueChange={v => setUserForm({ ...userForm, role: v })}>
+                <SelectTrigger data-testid="select-user-role"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="customer">Customer</SelectItem>
+                  <SelectItem value="technician">Technician</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => addUser.mutate()} disabled={addUser.isPending} data-testid="button-save-user">
+              {addUser.isPending && <Loader2 className="w-3 h-3 animate-spin mr-1" />} Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowAddUser(false)}>Cancel</Button>
+          </div>
+        </Card>
+      )}
+
       {customers.map(customer => (
         <Card key={customer.id} className={`p-4 ${!customer.isActive ? "opacity-50" : ""}`} data-testid={`card-customer-${customer.id}`}>
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-              {customer.name.charAt(0)}
+              {customer.name?.charAt(0) || "?"}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <p className="text-sm font-semibold truncate">{customer.name}</p>
+                <Badge variant="outline" className="text-[10px]">{customer.role}</Badge>
                 {customer.tag && (
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${TAG_COLORS[customer.tag]}`}>
                     {customer.tag}
                   </span>
                 )}
                 {!customer.isActive && (
-                  <Badge variant="destructive" className="text-[10px]">Inactive</Badge>
+                  <Badge variant="destructive" className="text-[10px]">Banned</Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">{customer.phone}</p>
@@ -284,7 +508,16 @@ function UsersTab() {
               data-testid={`button-toggle-active-${customer.id}`}
             >
               {customer.isActive ? <UserX className="w-3 h-3 mr-1" /> : <UserCheck className="w-3 h-3 mr-1" />}
-              {customer.isActive ? "Deactivate" : "Activate"}
+              {customer.isActive ? "Ban" : "Unban"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-destructive"
+              onClick={() => deleteUser.mutate(customer.id)}
+              data-testid={`button-delete-user-${customer.id}`}
+            >
+              <Trash2 className="w-3 h-3 mr-1" /> Delete
             </Button>
           </div>
         </Card>
@@ -297,8 +530,10 @@ function PricingZonesTab() {
   const { toast } = useToast();
   const [showAddPricing, setShowAddPricing] = useState(false);
   const [showAddZone, setShowAddZone] = useState(false);
+  const [editingRule, setEditingRule] = useState<string | null>(null);
   const [pricingForm, setPricingForm] = useState({ name: "", carpetType: "", pricePerSqMeter: "", description: "" });
   const [zoneForm, setZoneForm] = useState({ name: "", fee: "", description: "" });
+  const [editForm, setEditForm] = useState({ name: "", pricePerSqMeter: "", description: "" });
 
   const { data: rules = [] } = useQuery<PricingRule[]>({ queryKey: ["/api/pricing"] });
   const { data: zones = [] } = useQuery<DeliveryZone[]>({ queryKey: ["/api/delivery-zones"] });
@@ -310,6 +545,15 @@ function PricingZonesTab() {
       toast({ title: "Pricing Rule Created" });
       setShowAddPricing(false);
       setPricingForm({ name: "", carpetType: "", pricePerSqMeter: "", description: "" });
+    },
+  });
+
+  const updateRule = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/admin/pricing/${id}`, editForm),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pricing"] });
+      toast({ title: "Pricing Rule Updated" });
+      setEditingRule(null);
     },
   });
 
@@ -380,14 +624,36 @@ function PricingZonesTab() {
         )}
 
         {rules.map(rule => (
-          <Card key={rule.id} className="p-3 mb-2 flex items-center justify-between" data-testid={`card-pricing-${rule.id}`}>
-            <div>
-              <p className="text-sm font-medium">{rule.name}</p>
-              <p className="text-xs text-muted-foreground">{rule.carpetType} — KES {parseFloat(rule.pricePerSqMeter).toLocaleString()}/m²</p>
-            </div>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteRule.mutate(rule.id)} data-testid={`button-delete-rule-${rule.id}`}>
-              <Trash2 className="w-3.5 h-3.5 text-destructive" />
-            </Button>
+          <Card key={rule.id} className="p-3 mb-2" data-testid={`card-pricing-${rule.id}`}>
+            {editingRule === rule.id ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="h-8 text-sm" />
+                  <Input type="number" value={editForm.pricePerSqMeter} onChange={e => setEditForm({ ...editForm, pricePerSqMeter: e.target.value })} className="h-8 text-sm" />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="h-7 text-xs" onClick={() => updateRule.mutate(rule.id)} data-testid={`button-save-edit-${rule.id}`}>
+                    {updateRule.isPending && <Loader2 className="w-3 h-3 animate-spin mr-1" />} Save
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingRule(null)}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">{rule.name}</p>
+                  <p className="text-xs text-muted-foreground">{rule.carpetType} — KES {parseFloat(rule.pricePerSqMeter).toLocaleString()}/m²</p>
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingRule(rule.id); setEditForm({ name: rule.name, pricePerSqMeter: rule.pricePerSqMeter, description: rule.description || "" }); }} data-testid={`button-edit-rule-${rule.id}`}>
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteRule.mutate(rule.id)} data-testid={`button-delete-rule-${rule.id}`}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         ))}
       </div>
@@ -590,11 +856,6 @@ function PromotionsTab() {
                   {daysLeft !== null && daysLeft > 0 && (
                     <span className="text-xs text-primary font-medium">{daysLeft} Days</span>
                   )}
-                  {promo.expiresAt && (
-                    <span className="text-xs text-muted-foreground">
-                      Expire: {new Date(promo.expiresAt).toLocaleDateString("en-KE", { month: "short", day: "numeric", year: "numeric" })}
-                    </span>
-                  )}
                 </div>
               </div>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deletePromo.mutate(promo.id)} data-testid={`button-delete-promo-${promo.id}`}>
@@ -608,16 +869,140 @@ function PromotionsTab() {
   );
 }
 
+function MediaCMSTab() {
+  const { toast } = useToast();
+  const { data: media = [], isLoading } = useQuery<Media[]>({ queryKey: ["/api/admin/media"] });
+  const [uploading, setUploading] = useState(false);
+
+  const togglePublic = useMutation({
+    mutationFn: ({ id, isPublic }: { id: string; isPublic: boolean }) =>
+      apiRequest("PATCH", `/api/admin/media/${id}/public`, { isPublic }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
+      toast({ title: "Visibility Updated" });
+    },
+  });
+
+  const deleteMedia = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/media/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
+      toast({ title: "Media Deleted" });
+    },
+  });
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+        credentials: "include",
+      });
+      const data = await res.json();
+      await apiRequest("POST", "/api/admin/media", {
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        fileKey: data.fileKey,
+        mimeType: file.type,
+        category: "general",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
+      toast({ title: "Media Uploaded" });
+    } catch (err: any) {
+      toast({ title: "Upload Error", description: err.message, variant: "destructive" });
+    }
+    setUploading(false);
+    e.target.value = "";
+  };
+
+  if (isLoading) return <div className="space-y-3">{[1, 2].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-sm">Media Library ({media.length})</h3>
+        <label className="cursor-pointer">
+          <input type="file" accept="image/*,video/*" className="hidden" onChange={handleUpload} data-testid="input-media-upload" />
+          <Button size="sm" asChild disabled={uploading}>
+            <span>
+              {uploading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Upload className="w-3 h-3 mr-1" />}
+              Upload
+            </span>
+          </Button>
+        </label>
+      </div>
+
+      <p className="text-xs text-muted-foreground">Toggle items to "Public" to display on the landing page gallery.</p>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {media.map(item => {
+          const isPublic = item.category === "public";
+          return (
+            <Card key={item.id} className="overflow-hidden" data-testid={`card-media-${item.id}`}>
+              <div className="aspect-video bg-muted relative">
+                {item.mimeType.startsWith("image") ? (
+                  <img src={item.fileKey} alt={item.title} className="w-full h-full object-cover" />
+                ) : (
+                  <video src={item.fileKey} className="w-full h-full object-cover" />
+                )}
+                {isPublic && (
+                  <Badge className="absolute top-1 right-1 text-[10px] bg-green-600">Public</Badge>
+                )}
+              </div>
+              <div className="p-2">
+                <p className="text-xs font-medium truncate">{item.title}</p>
+                <div className="flex items-center justify-between mt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px]"
+                    onClick={() => togglePublic.mutate({ id: item.id, isPublic: !isPublic })}
+                    data-testid={`button-toggle-public-${item.id}`}
+                  >
+                    {isPublic ? <ToggleRight className="w-3 h-3 mr-1 text-green-600" /> : <ToggleLeft className="w-3 h-3 mr-1" />}
+                    {isPublic ? "Public" : "Private"}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteMedia.mutate(item.id)} data-testid={`button-delete-media-${item.id}`}>
+                    <Trash2 className="w-3 h-3 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {media.length === 0 && (
+        <div className="text-center py-12">
+          <Image className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">No media uploaded yet</p>
+          <p className="text-xs text-muted-foreground mt-1">Upload before/after photos for your landing page gallery</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const [showNotifs, setShowNotifs] = useState(false);
 
   const { data: user } = useQuery<User>({ queryKey: ["/api/auth/me"] });
 
   const { data: stats } = useQuery<{
     totalUsers: number; totalOrders: number; scheduledDeliveries: number; activePromotions: number;
     total: number; pending: number; inProgress: number; completed: number; revenue: number;
-  }>({ queryKey: ["/api/admin/stats"] });
+    activeJobs?: number; topCarpetTypes?: { type: string; count: number }[];
+  }>({ queryKey: ["/api/admin/stats/extended"] });
+
+  const { data: unreadCount = 0 } = useQuery<number>({
+    queryKey: ["/api/notifications/unread-count"],
+    refetchInterval: 15000,
+  });
 
   const logout = useMutation({
     mutationFn: () => apiRequest("POST", "/api/auth/logout"),
@@ -627,17 +1012,10 @@ export default function AdminDashboard() {
     },
   });
 
-  const statCards = [
-    { label: "All Users", value: stats?.totalUsers ?? 0, color: "from-emerald-500 to-emerald-600" },
-    { label: "All Orders", value: stats?.totalOrders ?? 0, color: "from-blue-500 to-blue-600" },
-    { label: "Scheduled\nDeliveries", value: stats?.scheduledDeliveries ?? 0, color: "from-amber-500 to-amber-600" },
-    { label: "Current\nPromotions", value: stats?.activePromotions ?? 0, color: "from-purple-500 to-purple-600" },
-  ];
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-50 bg-slate-900 text-white">
-        <div className="max-w-4xl mx-auto px-4 flex items-center justify-between h-14">
+        <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
@@ -648,8 +1026,17 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="relative" data-testid="button-admin-notifications">
-              <Bell className="w-5 h-5 text-slate-400" />
+            <button
+              className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
+              onClick={() => setShowNotifs(true)}
+              data-testid="button-admin-notifications"
+            >
+              <Bell className="w-5 h-5 text-slate-300" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center" data-testid="badge-admin-unread">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
             <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => logout.mutate()} data-testid="button-admin-logout">
               <LogOut className="w-4 h-4" />
@@ -658,17 +1045,60 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto w-full px-4 py-5 flex-1">
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          {statCards.map(stat => (
-            <Card key={stat.label} className={`p-3 bg-gradient-to-br ${stat.color} text-white border-0`}>
-              <p className="text-2xl font-bold" data-testid={`text-stat-${stat.label.replace(/\s+/g, '-').replace(/\n/g, '-').toLowerCase()}`}>
-                {stat.value}
-              </p>
-              <p className="text-[10px] opacity-80 whitespace-pre-line leading-tight mt-0.5">{stat.label}</p>
-            </Card>
-          ))}
+      <div className="max-w-5xl mx-auto w-full px-4 py-5 flex-1">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <Card className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-4 h-4 opacity-80" />
+              <p className="text-[10px] opacity-80">Total Revenue</p>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-stat-revenue">
+              KES {(stats?.revenue ?? 0).toLocaleString()}
+            </p>
+          </Card>
+          <Card className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Briefcase className="w-4 h-4 opacity-80" />
+              <p className="text-[10px] opacity-80">Active Jobs</p>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-stat-active-jobs">
+              {stats?.activeJobs ?? 0}
+            </p>
+          </Card>
+          <Card className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-4 h-4 opacity-80" />
+              <p className="text-[10px] opacity-80">Total Users</p>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-stat-users">
+              {stats?.totalUsers ?? 0}
+            </p>
+          </Card>
+          <Card className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Package className="w-4 h-4 opacity-80" />
+              <p className="text-[10px] opacity-80">Total Orders</p>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-stat-orders">
+              {stats?.totalOrders ?? 0}
+            </p>
+          </Card>
         </div>
+
+        {stats?.topCarpetTypes && stats.topCarpetTypes.length > 0 && (
+          <Card className="p-4 mb-6">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" /> Most Booked Carpet Types
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {stats.topCarpetTypes.map((ct, i) => (
+                <Badge key={ct.type} variant={i === 0 ? "default" : "secondary"} className="text-xs" data-testid={`badge-carpet-type-${ct.type}`}>
+                  {ct.type}: {ct.count}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Tabs defaultValue="orders">
           <TabsList className="mb-4 w-full justify-start overflow-x-auto" data-testid="tabs-admin">
@@ -687,35 +1117,20 @@ export default function AdminDashboard() {
             <TabsTrigger value="promotions" data-testid="tab-promotions" className="text-xs">
               <Tag className="w-3 h-3 mr-1" /> Promotions
             </TabsTrigger>
+            <TabsTrigger value="media" data-testid="tab-media" className="text-xs">
+              <Image className="w-3 h-3 mr-1" /> Media CMS
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="orders"><OrdersTab /></TabsContent>
           <TabsContent value="deliveries"><DeliveriesTab /></TabsContent>
           <TabsContent value="users"><UsersTab /></TabsContent>
           <TabsContent value="pricing"><PricingZonesTab /></TabsContent>
           <TabsContent value="promotions"><PromotionsTab /></TabsContent>
+          <TabsContent value="media"><MediaCMSTab /></TabsContent>
         </Tabs>
-
-        <div className="grid grid-cols-2 gap-3 mt-8">
-          <Card className="p-4 bg-slate-800 text-white cursor-pointer hover:bg-slate-700 transition-colors" data-testid="button-manage-users">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                <span className="text-sm font-semibold">Manage Users</span>
-              </div>
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          </Card>
-          <Card className="p-4 bg-slate-800 text-white cursor-pointer hover:bg-slate-700 transition-colors" data-testid="button-create-coupon-card">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag className="w-5 h-5" />
-                <span className="text-sm font-semibold">Create Coupon</span>
-              </div>
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          </Card>
-        </div>
       </div>
+
+      <AdminNotificationsPanel open={showNotifs} onClose={() => setShowNotifs(false)} />
     </div>
   );
 }

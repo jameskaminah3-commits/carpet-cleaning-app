@@ -174,6 +174,16 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const reviews = pgTable("reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  customerId: varchar("customer_id").notNull().references(() => users.id),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  isPublic: boolean("is_public").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, otpCode: true, otpExpiry: true, createdAt: true });
 export const insertPricingRuleSchema = createInsertSchema(pricingRules).omit({ id: true });
 export const insertDeliveryZoneSchema = createInsertSchema(deliveryZones).omit({ id: true });
@@ -185,6 +195,7 @@ export const insertDeliverySchema = createInsertSchema(deliveries).omit({ id: tr
 export const insertPromotionSchema = createInsertSchema(promotions).omit({ id: true, usageCount: true, createdAt: true });
 export const insertSavedAddressSchema = createInsertSchema(savedAddresses).omit({ id: true, createdAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -208,6 +219,8 @@ export type InsertSavedAddress = z.infer<typeof insertSavedAddressSchema>;
 export type SavedAddress = typeof savedAddresses.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;
+export type Review = typeof reviews.$inferSelect;
 
 export const phoneSchema = z.string().transform((val) => {
   let cleaned = val.replace(/\s+/g, "").replace(/-/g, "");
