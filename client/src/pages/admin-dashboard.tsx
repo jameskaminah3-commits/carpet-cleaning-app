@@ -873,13 +873,17 @@ function MediaCMSTab() {
   const { toast } = useToast();
   const { data: media = [], isLoading } = useQuery<Media[]>({ queryKey: ["/api/admin/media"] });
   const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSubtitle, setEditSubtitle] = useState("");
 
-  const togglePublic = useMutation({
-    mutationFn: ({ id, isPublic }: { id: string; isPublic: boolean }) =>
-      apiRequest("PATCH", `/api/admin/media/${id}/public`, { isPublic }),
+  const updateMedia = useMutation({
+    mutationFn: ({ id, ...data }: { id: string; title?: string; subtitle?: string; isPublic?: boolean }) =>
+      apiRequest("PATCH", `/api/admin/media/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
-      toast({ title: "Visibility Updated" });
+      toast({ title: "Media Updated" });
+      setEditingId(null);
     },
   });
 
@@ -910,12 +914,18 @@ function MediaCMSTab() {
         category: "general",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
-      toast({ title: "Media Uploaded" });
+      toast({ title: "Media Uploaded", description: "Edit the title and subtitle, then toggle to Public to show on landing page." });
     } catch (err: any) {
       toast({ title: "Upload Error", description: err.message, variant: "destructive" });
     }
     setUploading(false);
     e.target.value = "";
+  };
+
+  const startEditing = (item: Media) => {
+    setEditingId(item.id);
+    setEditTitle(item.title);
+    setEditSubtitle(item.subtitle || "");
   };
 
   if (isLoading) return <div className="space-y-3">{[1, 2].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>;
@@ -935,51 +945,89 @@ function MediaCMSTab() {
         </label>
       </div>
 
-      <p className="text-xs text-muted-foreground">Toggle items to "Public" to display on the landing page gallery.</p>
+      <p className="text-xs text-muted-foreground">Upload images/videos, set a title & subtitle, then toggle to "Public" to display on the landing page gallery.</p>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {media.map(item => {
-          const isPublic = item.category === "public";
-          return (
-            <Card key={item.id} className="overflow-hidden" data-testid={`card-media-${item.id}`}>
-              <div className="aspect-video bg-muted relative">
-                {item.mimeType.startsWith("image") ? (
-                  <img src={item.fileKey} alt={item.title} className="w-full h-full object-cover" />
-                ) : (
-                  <video src={item.fileKey} className="w-full h-full object-cover" />
-                )}
-                {isPublic && (
-                  <Badge className="absolute top-1 right-1 text-[10px] bg-green-600">Public</Badge>
-                )}
-              </div>
-              <div className="p-2">
-                <p className="text-xs font-medium truncate">{item.title}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-[10px]"
-                    onClick={() => togglePublic.mutate({ id: item.id, isPublic: !isPublic })}
-                    data-testid={`button-toggle-public-${item.id}`}
-                  >
-                    {isPublic ? <ToggleRight className="w-3 h-3 mr-1 text-green-600" /> : <ToggleLeft className="w-3 h-3 mr-1" />}
-                    {isPublic ? "Public" : "Private"}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteMedia.mutate(item.id)} data-testid={`button-delete-media-${item.id}`}>
-                    <Trash2 className="w-3 h-3 text-destructive" />
-                  </Button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        {media.map(item => (
+          <Card key={item.id} className="overflow-hidden" data-testid={`card-media-${item.id}`}>
+            <div className="aspect-video bg-muted relative">
+              {item.mimeType.startsWith("image") ? (
+                <img src={item.fileKey} alt={item.title} className="w-full h-full object-cover" />
+              ) : (
+                <video src={item.fileKey} className="w-full h-full object-cover" />
+              )}
+              {item.isPublic && (
+                <Badge className="absolute top-1 right-1 text-[10px] bg-green-600">Public</Badge>
+              )}
+            </div>
+            <div className="p-2 space-y-2">
+              {editingId === item.id ? (
+                <div className="space-y-1.5">
+                  <Input
+                    value={editTitle}
+                    onChange={e => setEditTitle(e.target.value)}
+                    placeholder="Title (e.g. Persian Rug)"
+                    className="h-7 text-xs"
+                    data-testid={`input-media-title-${item.id}`}
+                  />
+                  <Input
+                    value={editSubtitle}
+                    onChange={e => setEditSubtitle(e.target.value)}
+                    placeholder="Subtitle (e.g. Colors fully restored)"
+                    className="h-7 text-xs"
+                    data-testid={`input-media-subtitle-${item.id}`}
+                  />
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      className="h-6 text-[10px] flex-1"
+                      disabled={!editTitle.trim() || updateMedia.isPending}
+                      onClick={() => updateMedia.mutate({ id: item.id, title: editTitle.trim(), subtitle: editSubtitle.trim() || undefined })}
+                      data-testid={`button-save-media-${item.id}`}
+                    >
+                      {updateMedia.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => setEditingId(null)}>Cancel</Button>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          );
-        })}
+              ) : (
+                <>
+                  <div className="cursor-pointer" onClick={() => startEditing(item)}>
+                    <p className="text-xs font-medium truncate" data-testid={`text-media-title-${item.id}`}>{item.title}</p>
+                    <p className="text-[10px] text-muted-foreground truncate" data-testid={`text-media-subtitle-${item.id}`}>{item.subtitle || "No subtitle - click to edit"}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px]"
+                      onClick={() => updateMedia.mutate({ id: item.id, isPublic: !item.isPublic })}
+                      data-testid={`button-toggle-public-${item.id}`}
+                    >
+                      {item.isPublic ? <ToggleRight className="w-3 h-3 mr-1 text-green-600" /> : <ToggleLeft className="w-3 h-3 mr-1" />}
+                      {item.isPublic ? "Public" : "Private"}
+                    </Button>
+                    <div className="flex gap-0.5">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditing(item)} data-testid={`button-edit-media-${item.id}`}>
+                        <Edit3 className="w-3 h-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteMedia.mutate(item.id)} data-testid={`button-delete-media-${item.id}`}>
+                        <Trash2 className="w-3 h-3 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+        ))}
       </div>
 
       {media.length === 0 && (
         <div className="text-center py-12">
           <Image className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">No media uploaded yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Upload before/after photos for your landing page gallery</p>
+          <p className="text-xs text-muted-foreground mt-1">Upload before/after photos and videos for your landing page gallery</p>
         </div>
       )}
     </div>

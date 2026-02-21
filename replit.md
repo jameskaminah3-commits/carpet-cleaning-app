@@ -72,7 +72,8 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - `POST /api/upload` - Upload file (returns fileKey)
 - `GET /api/admin/media` - Get all media library items
 - `POST /api/admin/media` - Create media entry
-- `PATCH /api/admin/media/:id/public` - Toggle media public visibility
+- `GET /api/media/public` - Get all public media items (no auth, for landing page)
+- `PATCH /api/admin/media/:id` - Update media (title, subtitle, isPublic, category)
 - `DELETE /api/admin/media/:id` - Delete media
 
 ### Extended Admin
@@ -105,7 +106,7 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - **orders** (id, customerId, technicianId, status, totalAmount, depositPaid, balanceDue, isLocked, deliveryZoneId, pickupAddress, notes, locationLat, locationLng, locationName, pricingSnapshot, promotionId, discountAmount, pickupFee, deliveryFee, expressFee, createdAt, updatedAt)
 - **order_items** (id, orderId, carpetType, width, length, quantity, unitPrice, subtotal, description)
 - **order_photos** (id, orderId, fileKey, photoType, uploadedAt)
-- **media_library** (id, title, fileKey, mimeType, category, uploadedAt)
+- **media_library** (id, title, subtitle, fileKey, mimeType, category, isPublic, uploadedAt)
 - **deliveries** (id, orderId, technicianId, deliveryType, status, scheduledDate, scheduledTimeWindow, completedAt, notes, createdAt)
 - **promotions** (id, name, description, promoType, appliesTo, discountValue, couponCode, isVipOnly, isSingleUse, isActive, expiresAt, minOrders, targetTag, createdAt)
 - **saved_addresses** (id, userId, label, address, lat, lng, isDefault, createdAt)

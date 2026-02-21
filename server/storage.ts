@@ -86,8 +86,9 @@ export interface IStorage {
   getOrderPhotos(orderId: string): Promise<OrderPhoto[]>;
   createOrderPhoto(photo: InsertOrderPhoto): Promise<OrderPhoto>;
   getMediaLibrary(): Promise<Media[]>;
+  getPublicMedia(): Promise<Media[]>;
   createMedia(media: InsertMedia): Promise<Media>;
-  updateMediaPublic(id: string, isPublic: boolean): Promise<Media>;
+  updateMedia(id: string, data: Partial<{ title: string; subtitle: string; isPublic: boolean; category: string }>): Promise<Media>;
   deleteMedia(id: string): Promise<void>;
 
   getStats(): Promise<{
@@ -425,8 +426,12 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateMediaPublic(id: string, isPublic: boolean): Promise<Media> {
-    const [updated] = await db.update(mediaLibrary).set({ category: isPublic ? "public" : "general" }).where(eq(mediaLibrary.id, id)).returning();
+  async getPublicMedia(): Promise<Media[]> {
+    return db.select().from(mediaLibrary).where(eq(mediaLibrary.isPublic, true)).orderBy(mediaLibrary.uploadedAt);
+  }
+
+  async updateMedia(id: string, data: Partial<{ title: string; subtitle: string; isPublic: boolean; category: string }>): Promise<Media> {
+    const [updated] = await db.update(mediaLibrary).set(data).where(eq(mediaLibrary.id, id)).returning();
     return updated;
   }
 

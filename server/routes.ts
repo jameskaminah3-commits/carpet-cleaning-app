@@ -706,6 +706,11 @@ export async function registerRoutes(
     res.json(publicReviews);
   });
 
+  app.get("/api/media/public", async (_req, res) => {
+    const publicMedia = await storage.getPublicMedia();
+    res.json(publicMedia);
+  });
+
   // Order photos upload
   app.post("/api/orders/:id/photos", authMiddleware, async (req, res) => {
     try {
@@ -791,9 +796,10 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin/media/:id/public", authMiddleware, adminMiddleware, async (req, res) => {
+  app.patch("/api/admin/media/:id", authMiddleware, adminMiddleware, async (req, res) => {
     try {
-      const updated = await storage.updateMediaPublic(paramId(req), req.body.isPublic ?? true);
+      const { title, subtitle, isPublic, category } = req.body;
+      const updated = await storage.updateMedia(paramId(req), { title, subtitle, isPublic, category });
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ message: err.message });

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import type { Review, User } from "@shared/schema";
+import type { Review, User, Media } from "@shared/schema";
 
 const PHONE_NUMBER = "0707255598";
 const WHATSAPP_LINK = `https://wa.me/254707255598?text=${encodeURIComponent("Hi CarpetPro! I'd like to get a free estimate for carpet cleaning.")}`;
@@ -183,20 +183,20 @@ const steps = [
   { step: "4", title: "Ready to Use", desc: "Carpets returned dry, fresh, and ready to walk on — as fast as 2 hours" },
 ];
 
-type GallerySlide =
-  | { type: "photo"; before: string; after: string; label: string; desc: string }
-  | { type: "video"; src: string; label: string; desc: string };
-
-const gallerySlides: GallerySlide[] = [
-  { type: "photo", before: "/images/before-1.png", after: "/images/after-1.png", label: "Wool Carpet", desc: "Red soil stains removed" },
-  { type: "video", src: "/images/video-cleaning-1.mp4", label: "Deep Extraction", desc: "Watch our process in action" },
-  { type: "photo", before: "/images/before-2.png", after: "/images/after-2.png", label: "Persian Rug", desc: "Colors fully restored" },
-  { type: "photo", before: "/images/before-3.png", after: "/images/after-3.png", label: "Shag Carpet", desc: "Pet stains eliminated" },
-  { type: "video", src: "/images/video-cleaning-2.mp4", label: "Fresh Results", desc: "See the transformation" },
-  { type: "photo", before: "/images/before-4.png", after: "/images/after-4.png", label: "Office Carpet", desc: "Traffic wear reversed" },
-];
-
 function BeforeAfterGallery() {
+  const { data: publicMedia = [] } = useQuery<Media[]>({ queryKey: ["/api/media/public"] });
+
+  const slides = useMemo(() => {
+    if (publicMedia.length === 0) return [];
+    return publicMedia.map(item => ({
+      id: item.id,
+      src: item.fileKey,
+      isVideo: item.mimeType.startsWith("video"),
+      title: item.title,
+      subtitle: item.subtitle || "",
+    }));
+  }, [publicMedia]);
+
   const observerRef = { current: null as ResizeObserver | null };
   const trackRef = useCallback((node: HTMLDivElement | null) => {
     if (observerRef.current) {
@@ -209,15 +209,17 @@ function BeforeAfterGallery() {
       if (!firstChild) return;
       const computedGap = parseFloat(getComputedStyle(node).gap) || 0;
       const childWidth = firstChild.offsetWidth + computedGap;
-      const setWidth = childWidth * gallerySlides.length;
+      const setWidth = childWidth * Math.max(slides.length, 1);
       node.style.setProperty("--single-set-width", `${setWidth}px`);
     };
     measure();
     observerRef.current = new ResizeObserver(measure);
     observerRef.current.observe(node);
-  }, []);
+  }, [slides.length]);
 
-  const trackItems = [...gallerySlides, ...gallerySlides, ...gallerySlides];
+  if (slides.length === 0) return null;
+
+  const trackItems = slides.length >= 3 ? [...slides, ...slides, ...slides] : [...slides];
 
   return (
     <section className="py-20 sm:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden" data-testid="section-before-after">
@@ -238,35 +240,12 @@ function BeforeAfterGallery() {
         <div className="overflow-hidden">
           <div
             ref={trackRef}
-            className="flex gap-6 gallery-scroll-track"
-            style={{ ["--duration" as string]: `${gallerySlides.length * 5}s` }}
+            className={`flex gap-6 ${slides.length >= 3 ? "gallery-scroll-track" : "justify-center"}`}
+            style={slides.length >= 3 ? { ["--duration" as string]: `${slides.length * 5}s` } : undefined}
           >
             {trackItems.map((slide, i) => (
-              <div key={i} className="flex-shrink-0 w-[280px] sm:w-[340px] lg:w-[400px]">
-                {slide.type === "photo" ? (
-                  <div className="grid grid-cols-2 gap-1.5 rounded-xl overflow-hidden">
-                    <div className="relative">
-                      <img
-                        src={slide.before}
-                        alt={`${slide.label} before cleaning`}
-                        className="w-full aspect-[4/3] object-cover"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <span className="absolute bottom-2 left-2 bg-red-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">Before</span>
-                    </div>
-                    <div className="relative">
-                      <img
-                        src={slide.after}
-                        alt={`${slide.label} after cleaning`}
-                        className="w-full aspect-[4/3] object-cover"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <span className="absolute bottom-2 left-2 bg-green-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">After</span>
-                    </div>
-                  </div>
-                ) : (
+              <div key={`${slide.id}-${i}`} className="flex-shrink-0 w-[280px] sm:w-[340px] lg:w-[400px]">
+                {slide.isVideo ? (
                   <div className="rounded-xl overflow-hidden relative">
                     <video
                       src={slide.src}
@@ -284,10 +263,20 @@ function BeforeAfterGallery() {
                       VIDEO
                     </div>
                   </div>
+                ) : (
+                  <div className="rounded-xl overflow-hidden relative">
+                    <img
+                      src={slide.src}
+                      alt={slide.title}
+                      className="w-full aspect-video object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  </div>
                 )}
                 <div className="mt-3 text-center">
-                  <p className="font-semibold text-sm text-white">{slide.label}</p>
-                  <p className="text-xs text-white/50">{slide.desc}</p>
+                  <p className="font-semibold text-sm text-white" data-testid={`text-gallery-title-${i}`}>{slide.title}</p>
+                  {slide.subtitle && <p className="text-xs text-white/50" data-testid={`text-gallery-subtitle-${i}`}>{slide.subtitle}</p>}
                 </div>
               </div>
             ))}
