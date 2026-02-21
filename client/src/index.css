@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes gallery-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-1 * var(--single-set-width))); }
+}
+
+.gallery-scroll-track {
+  animation: gallery-scroll var(--duration, 30s) linear infinite;
+}
+
+.gallery-scroll-track:hover {
+  animation-play-state: paused;
+}
+
 @keyframes ripple-1 {
   0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.35; }
   50% { transform: translate(-50%, -50%) scale(1.6); opacity: 0.08; }

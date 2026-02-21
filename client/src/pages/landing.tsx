@@ -181,32 +181,49 @@ const steps = [
   { step: "4", title: "Ready to Use", desc: "Carpets returned dry, fresh, and ready to walk on — as fast as 2 hours" },
 ];
 
-const beforeAfterItems = [
-  { before: "/images/before-1.png", after: "/images/after-1.png", label: "Wool Carpet", desc: "Red soil stains removed" },
-  { before: "/images/before-2.png", after: "/images/after-2.png", label: "Persian Rug", desc: "Colors fully restored" },
-  { before: "/images/before-3.png", after: "/images/after-3.png", label: "Shag Carpet", desc: "Pet stains eliminated" },
-  { before: "/images/before-4.png", after: "/images/after-4.png", label: "Office Carpet", desc: "Traffic wear reversed" },
+type GallerySlide =
+  | { type: "photo"; before: string; after: string; label: string; desc: string }
+  | { type: "video"; src: string; label: string; desc: string };
+
+const gallerySlides: GallerySlide[] = [
+  { type: "photo", before: "/images/before-1.png", after: "/images/after-1.png", label: "Wool Carpet", desc: "Red soil stains removed" },
+  { type: "video", src: "/images/video-cleaning-1.mp4", label: "Deep Extraction", desc: "Watch our process in action" },
+  { type: "photo", before: "/images/before-2.png", after: "/images/after-2.png", label: "Persian Rug", desc: "Colors fully restored" },
+  { type: "photo", before: "/images/before-3.png", after: "/images/after-3.png", label: "Shag Carpet", desc: "Pet stains eliminated" },
+  { type: "video", src: "/images/video-cleaning-2.mp4", label: "Fresh Results", desc: "See the transformation" },
+  { type: "photo", before: "/images/before-4.png", after: "/images/after-4.png", label: "Office Carpet", desc: "Traffic wear reversed" },
 ];
 
 function BeforeAfterGallery() {
-  const [offset, setOffset] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setOffset((prev) => prev + 1);
-    }, 3000);
-    return () => clearInterval(timer);
+  const observerRef = { current: null as ResizeObserver | null };
+  const trackRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (!node) return;
+    const measure = () => {
+      const firstChild = node.firstElementChild as HTMLElement | null;
+      if (!firstChild) return;
+      const computedGap = parseFloat(getComputedStyle(node).gap) || 0;
+      const childWidth = firstChild.offsetWidth + computedGap;
+      const setWidth = childWidth * gallerySlides.length;
+      node.style.setProperty("--single-set-width", `${setWidth}px`);
+    };
+    measure();
+    observerRef.current = new ResizeObserver(measure);
+    observerRef.current.observe(node);
   }, []);
 
-  const doubled = [...beforeAfterItems, ...beforeAfterItems];
+  const trackItems = [...gallerySlides, ...gallerySlides, ...gallerySlides];
 
   return (
     <section className="py-20 sm:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden" data-testid="section-before-after">
       <div className="absolute w-80 h-80 rounded-full bg-primary/8 blur-3xl -top-20 -right-20" />
       <div className="absolute w-64 h-64 rounded-full bg-emerald-500/8 blur-3xl bottom-0 left-10" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+      <div className="relative z-10">
+        <div className="text-center mb-12 px-4 sm:px-6 lg:px-8">
           <Badge variant="secondary" className="mb-4 bg-white/10 border-white/20 text-white text-xs">Real Results</Badge>
           <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-before-after-title">
             Before & <span className="text-primary">After</span>
@@ -216,58 +233,67 @@ function BeforeAfterGallery() {
           </p>
         </div>
 
-        <div className="overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="flex gap-6"
-            animate={{ x: `-${(offset % beforeAfterItems.length) * (100 / beforeAfterItems.length)}%` }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
+        <div className="overflow-hidden">
+          <div
+            ref={trackRef}
+            className="flex gap-6 gallery-scroll-track"
+            style={{ ["--duration" as string]: `${gallerySlides.length * 5}s` }}
           >
-            {doubled.map((item, i) => (
-              <div key={i} className="flex-shrink-0 w-[85%] sm:w-[45%] lg:w-[calc(50%-12px)]">
-                <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
-                  <div className="relative group">
-                    <img
-                      src={item.before}
-                      alt={`${item.label} before cleaning`}
-                      className="w-full aspect-[4/3] object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <span className="absolute bottom-2 left-2 bg-red-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">Before</span>
+            {trackItems.map((slide, i) => (
+              <div key={i} className="flex-shrink-0 w-[280px] sm:w-[340px] lg:w-[400px]">
+                {slide.type === "photo" ? (
+                  <div className="grid grid-cols-2 gap-1.5 rounded-xl overflow-hidden">
+                    <div className="relative">
+                      <img
+                        src={slide.before}
+                        alt={`${slide.label} before cleaning`}
+                        className="w-full aspect-[4/3] object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <span className="absolute bottom-2 left-2 bg-red-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">Before</span>
+                    </div>
+                    <div className="relative">
+                      <img
+                        src={slide.after}
+                        alt={`${slide.label} after cleaning`}
+                        className="w-full aspect-[4/3] object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <span className="absolute bottom-2 left-2 bg-green-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">After</span>
+                    </div>
                   </div>
-                  <div className="relative group">
-                    <img
-                      src={item.after}
-                      alt={`${item.label} after cleaning`}
-                      className="w-full aspect-[4/3] object-cover"
-                      loading="lazy"
+                ) : (
+                  <div className="rounded-xl overflow-hidden relative">
+                    <video
+                      src={slide.src}
+                      className="w-full aspect-video object-cover"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      preload="metadata"
+                      data-testid={`video-gallery-${i}`}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <span className="absolute bottom-2 left-2 bg-green-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">After</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                    <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                      VIDEO
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="mt-3 text-center">
-                  <p className="font-semibold text-sm text-white">{item.label}</p>
-                  <p className="text-xs text-white/50">{item.desc}</p>
+                  <p className="font-semibold text-sm text-white">{slide.label}</p>
+                  <p className="text-xs text-white/50">{slide.desc}</p>
                 </div>
               </div>
             ))}
-          </motion.div>
+          </div>
         </div>
 
-        <div className="flex justify-center gap-2 mt-8">
-          {beforeAfterItems.map((_, i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                (offset % beforeAfterItems.length) === i ? "bg-primary w-6" : "bg-white/30"
-              }`}
-            />
-          ))}
-        </div>
-
-        <div className="text-center mt-10">
-          <p className="text-white/50 text-xs mb-4">Trusted by 5,000+ Nairobi homes and offices</p>
+        <div className="text-center mt-10 px-4">
+          <p className="text-white/50 text-xs">Trusted by 5,000+ Nairobi homes and offices</p>
         </div>
       </div>
     </section>
