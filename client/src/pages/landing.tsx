@@ -181,6 +181,99 @@ const steps = [
   { step: "4", title: "Ready to Use", desc: "Carpets returned dry, fresh, and ready to walk on — as fast as 2 hours" },
 ];
 
+const beforeAfterItems = [
+  { before: "/images/before-1.png", after: "/images/after-1.png", label: "Wool Carpet", desc: "Red soil stains removed" },
+  { before: "/images/before-2.png", after: "/images/after-2.png", label: "Persian Rug", desc: "Colors fully restored" },
+  { before: "/images/before-3.png", after: "/images/after-3.png", label: "Shag Carpet", desc: "Pet stains eliminated" },
+  { before: "/images/before-4.png", after: "/images/after-4.png", label: "Office Carpet", desc: "Traffic wear reversed" },
+];
+
+function BeforeAfterGallery() {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setOffset((prev) => prev + 1);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const doubled = [...beforeAfterItems, ...beforeAfterItems];
+
+  return (
+    <section className="py-20 sm:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden" data-testid="section-before-after">
+      <div className="absolute w-80 h-80 rounded-full bg-primary/8 blur-3xl -top-20 -right-20" />
+      <div className="absolute w-64 h-64 rounded-full bg-emerald-500/8 blur-3xl bottom-0 left-10" />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <Badge variant="secondary" className="mb-4 bg-white/10 border-white/20 text-white text-xs">Real Results</Badge>
+          <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-before-after-title">
+            Before & <span className="text-primary">After</span>
+          </h2>
+          <p className="mt-4 text-white/60 max-w-2xl mx-auto">
+            See the difference our Deep Extraction Technology makes. Every carpet tells a transformation story.
+          </p>
+        </div>
+
+        <div className="overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="flex gap-6"
+            animate={{ x: `-${(offset % beforeAfterItems.length) * (100 / beforeAfterItems.length)}%` }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+          >
+            {doubled.map((item, i) => (
+              <div key={i} className="flex-shrink-0 w-[85%] sm:w-[45%] lg:w-[calc(50%-12px)]">
+                <div className="grid grid-cols-2 gap-2 rounded-xl overflow-hidden">
+                  <div className="relative group">
+                    <img
+                      src={item.before}
+                      alt={`${item.label} before cleaning`}
+                      className="w-full aspect-[4/3] object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <span className="absolute bottom-2 left-2 bg-red-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">Before</span>
+                  </div>
+                  <div className="relative group">
+                    <img
+                      src={item.after}
+                      alt={`${item.label} after cleaning`}
+                      className="w-full aspect-[4/3] object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <span className="absolute bottom-2 left-2 bg-green-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">After</span>
+                  </div>
+                </div>
+                <div className="mt-3 text-center">
+                  <p className="font-semibold text-sm text-white">{item.label}</p>
+                  <p className="text-xs text-white/50">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+
+        <div className="flex justify-center gap-2 mt-8">
+          {beforeAfterItems.map((_, i) => (
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                (offset % beforeAfterItems.length) === i ? "bg-primary w-6" : "bg-white/30"
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="text-center mt-10">
+          <p className="text-white/50 text-xs mb-4">Trusted by 5,000+ Nairobi homes and offices</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TestimonialsCarousel() {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -534,70 +627,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 sm:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden">
-        <div className="absolute w-80 h-80 rounded-full bg-primary/8 blur-3xl -top-20 -right-20" />
-        <div className="absolute w-64 h-64 rounded-full bg-emerald-500/8 blur-3xl bottom-0 left-10" />
-
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid lg:grid-cols-2 gap-12 items-center"
-          >
-            <motion.div variants={fadeUp}>
-              <Badge variant="secondary" className="mb-4 bg-white/10 border-white/20 text-white text-xs">Investment Protection</Badge>
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold mb-4" data-testid="text-property-value">
-                Property Value{" "}
-                <span className="text-primary">Protection</span>
-              </h2>
-              <p className="text-white/70 leading-relaxed text-lg mb-6">
-                Your carpets are a significant investment. Regular deep extraction cleaning extends carpet life by 3-5x, maintains appearance, and protects the air quality of your home or office. Think of it as preventive maintenance for one of your most valuable furnishings.
-              </p>
-              <ul className="space-y-3 mb-8">
-                {[
-                  "Extends carpet lifespan by 3-5 years",
-                  "Maintains color vibrancy and texture",
-                  "Removes allergens that damage fibers over time",
-                  "Preserves manufacturer warranty compliance",
-                  "Protects your interior design investment",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-sm text-white/80">
-                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-wrap gap-3">
-                <Button size="lg" onClick={() => navigate("/book")} data-testid="button-estimate-property">
-                  Get a Free Estimate <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" variant="outline" className="border-green-500/30 text-green-400 hover:bg-green-500/10">
-                    <MessageCircle className="mr-2 w-4 h-4" /> Ask Us Anything
-                  </Button>
-                </a>
-              </div>
-            </motion.div>
-
-            <motion.div variants={scaleIn} className="grid grid-cols-2 gap-4">
-              {[
-                { icon: Home, label: "Home Carpets", desc: "Living rooms, bedrooms" },
-                { icon: Award, label: "Premium Rugs", desc: "Persian, Oriental, Silk" },
-                { icon: Shield, label: "Office Carpets", desc: "Commercial spaces" },
-                { icon: Baby, label: "Nursery Safe", desc: "Zero-residue guarantee" },
-              ].map((item) => (
-                <Card key={item.label} className="p-5 bg-white/5 border-white/10 text-center hover:bg-white/10 transition-colors">
-                  <item.icon className="w-8 h-8 text-primary mx-auto mb-2" />
-                  <p className="font-semibold text-sm text-white">{item.label}</p>
-                  <p className="text-[11px] text-white/50 mt-0.5">{item.desc}</p>
-                </Card>
-              ))}
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
+      <BeforeAfterGallery />
 
       <section id="how-it-works" className="py-20 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
