@@ -625,33 +625,33 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.85, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.7, type: "spring", damping: 20 }}
-              className="hidden lg:flex items-center justify-center relative"
+              className="flex items-center justify-center relative mx-auto lg:mx-0"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.4)_0%,transparent_70%)]" />
 
               <motion.div
-                className="absolute top-4 right-12 text-white/40"
+                className="absolute top-0 right-6 sm:top-4 sm:right-12 text-white/40"
                 animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
                 transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
               >
                 <SparkleStarSVG size={18} />
               </motion.div>
               <motion.div
-                className="absolute top-20 left-4 text-white/30"
+                className="absolute top-10 left-0 sm:top-20 sm:left-4 text-white/30"
                 animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
                 transition={{ duration: 3, repeat: Infinity, delay: 1.2 }}
               >
                 <SparkleStarSVG size={14} />
               </motion.div>
               <motion.div
-                className="absolute bottom-16 right-8 text-[#5EE6A8]/50"
+                className="absolute bottom-8 right-4 sm:bottom-16 sm:right-8 text-[#5EE6A8]/50"
                 animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
                 transition={{ duration: 2, repeat: Infinity, delay: 0.8 }}
               >
                 <SparkleStarSVG size={20} />
               </motion.div>
               <motion.div
-                className="absolute bottom-28 left-10 text-[#6ED3FF]/40"
+                className="absolute bottom-16 left-4 sm:bottom-28 sm:left-10 text-[#6ED3FF]/40"
                 animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
                 transition={{ duration: 2.8, repeat: Infinity, delay: 1.5 }}
               >
@@ -661,7 +661,7 @@ export default function LandingPage() {
               <motion.img
                 src={logoClear}
                 alt="Sparkle n' Glee mascot"
-                className="relative z-10 w-[320px] h-auto drop-shadow-2xl"
+                className="relative z-10 w-[200px] sm:w-[260px] lg:w-[320px] h-auto drop-shadow-2xl"
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 data-testid="img-hero-mascot"
