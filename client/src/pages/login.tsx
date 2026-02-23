@@ -62,10 +62,8 @@ export default function LoginPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
-            <span className="font-serif text-lg font-bold">CarpetPro</span>
+            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-8 w-auto" />
+            <span className="text-lg font-bold text-primary">Sparkle n' Glee</span>
           </div>
         </div>
       </header>
@@ -82,7 +80,7 @@ export default function LoginPage() {
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Phone className="w-5 h-5 text-primary" />
               </div>
-              <h1 className="text-2xl font-serif font-bold" data-testid="text-login-title">
+              <h1 className="text-2xl font-sans font-bold" data-testid="text-login-title">
                 {step === "phone" ? "Welcome Back" : "Verify OTP"}
               </h1>
               <p className="text-sm text-muted-foreground mt-2">

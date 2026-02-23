@@ -228,7 +228,7 @@ export default function BookingPage() {
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <span className="font-serif text-lg font-bold">Book Cleaning</span>
+            <span className="font-sans text-lg font-bold">Book Cleaning</span>
           </div>
         </div>
       </header>
@@ -262,7 +262,7 @@ export default function BookingPage() {
             <motion.div key="step-0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-serif font-bold mb-1" data-testid="text-step-title">Carpet Details</h2>
+                  <h2 className="text-xl font-sans font-bold mb-1" data-testid="text-step-title">Carpet Details</h2>
                   <p className="text-sm text-muted-foreground">Add the carpets you'd like us to clean. Pricing updates as you fill in details.</p>
                 </div>
                 {items.map((item, index) => {
@@ -395,7 +395,7 @@ export default function BookingPage() {
             <motion.div key="step-1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-serif font-bold mb-1" data-testid="text-step-title">Upload Photos</h2>
+                  <h2 className="text-xl font-sans font-bold mb-1" data-testid="text-step-title">Upload Photos</h2>
                   <p className="text-sm text-muted-foreground">Take photos of your carpets for a more accurate estimate. (Optional)</p>
                 </div>
                 <Card className="p-6">
@@ -450,7 +450,7 @@ export default function BookingPage() {
             <motion.div key="step-2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-serif font-bold mb-1" data-testid="text-step-title">Pickup Location</h2>
+                  <h2 className="text-xl font-sans font-bold mb-1" data-testid="text-step-title">Pickup Location</h2>
                   <p className="text-sm text-muted-foreground">Where should we pick up your carpets?</p>
                 </div>
                 <Card className="p-5 space-y-4">
@@ -509,7 +509,7 @@ export default function BookingPage() {
             <motion.div key="step-3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-serif font-bold mb-1" data-testid="text-step-title">Order Summary</h2>
+                  <h2 className="text-xl font-sans font-bold mb-1" data-testid="text-step-title">Order Summary</h2>
                   <p className="text-sm text-muted-foreground">Review your order before submitting.</p>
                 </div>
                 <Card className="p-5 space-y-3">

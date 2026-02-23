@@ -291,7 +291,7 @@ function HomeTab({ user, orders }: { user: User; orders: (Order & { items?: Orde
           <div className="flex items-start justify-between relative z-10">
             <div>
               <p className="text-slate-300 text-sm">Hello, {user.name?.split(" ")[0]}</p>
-              <h2 className="text-xl font-serif font-bold mt-0.5" data-testid="text-greeting">Welcome Back</h2>
+              <h2 className="text-xl font-sans font-bold mt-0.5" data-testid="text-greeting">Welcome Back</h2>
               <div className="flex items-center gap-1.5 mt-2 bg-white/10 rounded-full px-3 py-1 w-fit">
                 <Phone className="w-3 h-3" />
                 <span className="text-xs">{user.phone}</span>
@@ -539,7 +539,7 @@ function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) 
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
             <Package className="w-7 h-7 text-muted-foreground" />
           </div>
-          <h3 className="font-serif text-lg font-bold mb-2" data-testid="text-empty-title">No Orders Yet</h3>
+          <h3 className="font-sans text-lg font-bold mb-2" data-testid="text-empty-title">No Orders Yet</h3>
           <p className="text-sm text-muted-foreground mb-6">Book your first carpet cleaning today!</p>
         </motion.div>
       )}
@@ -574,7 +574,7 @@ function ReviewDialog({ open, onClose, order }: { open: boolean; onClose: () => 
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-serif">Rate Your Experience</DialogTitle>
+          <DialogTitle className="font-sans">Rate Your Experience</DialogTitle>
         </DialogHeader>
         {order && (
           <div className="space-y-4">
@@ -723,7 +723,7 @@ function ProfileTab({ user }: { user: User }) {
             {user.name?.charAt(0)}
           </div>
           <div className="flex-1">
-            <h3 className="font-serif font-bold text-lg" data-testid="text-profile-name">{user.name}</h3>
+            <h3 className="font-sans font-bold text-lg" data-testid="text-profile-name">{user.name}</h3>
             <p className="text-sm text-muted-foreground">{user.phone}</p>
             {user.tag && (
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${TAG_COLORS[user.tag] || "bg-gray-200"}`}>
@@ -853,12 +853,9 @@ export default function CustomerDashboard() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-              <Sparkles className="w-3 h-3 text-primary-foreground" />
-            </div>
-            <span className="font-serif text-sm font-bold">
-              <span className="text-muted-foreground">Carpet</span>Pro{" "}
-              <span className="italic text-primary">Executive</span>
+            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-7 w-auto" />
+            <span className="text-sm font-bold text-primary">
+              Sparkle n' Glee
             </span>
           </div>
           <button

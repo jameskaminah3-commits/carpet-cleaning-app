@@ -487,14 +487,14 @@ export class DatabaseStorage implements IStorage {
       phone: "+254700000001",
       name: "Admin User",
       role: "admin",
-      email: "admin@carpetpro.co.ke",
+      email: "admin@sparklenglee.co.ke",
     }).returning();
 
     const [tech] = await db.insert(users).values({
       phone: "+254700000002",
       name: "John Kamau",
       role: "technician",
-      email: "john@carpetpro.co.ke",
+      email: "john@sparklenglee.co.ke",
     }).returning();
 
     const [customer1] = await db.insert(users).values({

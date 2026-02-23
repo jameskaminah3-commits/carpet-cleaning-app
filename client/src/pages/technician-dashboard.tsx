@@ -65,7 +65,7 @@ export default function TechnicianDashboard() {
             <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <span className="font-serif text-lg font-bold">My Tasks</span>
+            <span className="font-sans text-lg font-bold">My Tasks</span>
           </div>
           <div className="flex items-center gap-2">
             {user && <span className="text-xs text-muted-foreground">{user.name}</span>}
@@ -187,7 +187,7 @@ export default function TechnicianDashboard() {
                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                   <Package className="w-7 h-7 text-muted-foreground" />
                 </div>
-                <h3 className="font-serif text-lg font-bold mb-2" data-testid="text-no-tasks">No Tasks</h3>
+                <h3 className="font-sans text-lg font-bold mb-2" data-testid="text-no-tasks">No Tasks</h3>
                 <p className="text-sm text-muted-foreground">You have no assigned tasks right now.</p>
               </motion.div>
             )}

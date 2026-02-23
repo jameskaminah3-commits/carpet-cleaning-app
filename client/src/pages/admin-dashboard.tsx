@@ -46,7 +46,7 @@ function AdminNotificationsPanel({ open, onClose }: { open: boolean; onClose: ()
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif flex items-center gap-2">
+          <DialogTitle className="font-sans flex items-center gap-2">
             <Bell className="w-5 h-5" /> Notifications
           </DialogTitle>
         </DialogHeader>
@@ -114,7 +114,7 @@ function OrderDetailDialog({ open, onClose, order }: { open: boolean; onClose: (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif">Order #{order.id.slice(0, 8)}</DialogTitle>
+          <DialogTitle className="font-sans">Order #{order.id.slice(0, 8)}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center gap-3">

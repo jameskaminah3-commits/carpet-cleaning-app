@@ -1,11 +1,20 @@
-# CarpetPro Executive
+# Sparkle n' Glee
 
 ## Overview
-Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning company with three interfaces: Customer (desktop-responsive with bottom navigation, functional notifications, M-Pesa payment flow, coupon redemption), Technician (task management), and Admin (comprehensive operations dashboard with user management, delivery scheduling, promotions/coupon system with eligibility rules, customer tagging, and price adjustment with payment request notifications).
+Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning company ("Sparkle n' Glee - Sparkling, Spotless, Fast") with three interfaces: Customer (desktop-responsive with bottom navigation, functional notifications, M-Pesa payment flow, coupon redemption), Technician (task management), and Admin (comprehensive operations dashboard with user management, delivery scheduling, promotions/coupon system with eligibility rules, customer tagging, and price adjustment with payment request notifications).
+
+## Branding
+- **Name**: Sparkle n' Glee
+- **Tagline**: Sparkling, Spotless, Fast
+- **Primary Color**: Soft Bright Blue (#3A86E9 range, HSL 214 78% 55%)
+- **Accent Colors**: Soft Aqua (#6ED3FF), Fresh Teal (#2EC4B6), Clean Mint (#5EE6A8)
+- **Font**: Poppins (rounded sans-serif)
+- **Logo**: Star mascot with trailing sparkles (clear background version at /logo-clear.png)
+- **Aesthetic**: Light, airy, fresh — light blue gradient to white, sparkle elements, rounded cards
 
 ## Tech Stack
 - **Frontend**: React + TypeScript + Vite + Wouter (routing) + TanStack Query + Framer Motion
-- **Styling**: TailwindCSS with warm amber/earth tone theme
+- **Styling**: TailwindCSS with soft blue/teal/mint theme, Poppins font
 - **Backend**: Express.js + TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
 - **Auth**: Session cookies with OTP-based phone login

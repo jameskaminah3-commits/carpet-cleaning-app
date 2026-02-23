@@ -11,9 +11,10 @@ import {
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { Review, User, Media } from "@shared/schema";
+import logoClear from "@assets/ChatGPT_Image_Feb_23,_2026,_10_00_55_PM_1771873311337.png";
 
 const PHONE_NUMBER = "0707255598";
-const WHATSAPP_LINK = `https://wa.me/254707255598?text=${encodeURIComponent("Hi CarpetPro! I'd like to get a free estimate for carpet cleaning.")}`;
+const WHATSAPP_LINK = `https://wa.me/254707255598?text=${encodeURIComponent("Hi Sparkle n' Glee! I'd like to get a free estimate for carpet cleaning.")}`;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -30,58 +31,46 @@ const scaleIn = {
 };
 
 function HeroBackground() {
-  const { scrollYProgress } = useScroll();
-  const fiberY = useTransform(scrollYProgress, [0, 0.4], [0, -60]);
-
-  const bubbles = useMemo(() =>
-    Array.from({ length: 30 }, (_, i) => ({
-      left: `${2 + (i * 3.3) % 96}%`,
-      bottom: `${-5 - (i * 2) % 10}%`,
-      size: 5 + (i % 6) * 4,
-      duration: `${8 + (i % 8) * 2}s`,
-      delay: `${(i * 0.7) % 10}s`,
-      opacity: 0.25 + (i % 4) * 0.12,
+  const sparkles = useMemo(() =>
+    Array.from({ length: 20 }, (_, i) => ({
+      left: `${5 + (i * 4.7) % 90}%`,
+      top: `${5 + (i * 5.3) % 85}%`,
+      size: 3 + (i % 4) * 2,
+      duration: `${3 + (i % 5) * 1.5}s`,
+      delay: `${(i * 0.5) % 8}s`,
     })), []);
 
   return (
     <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0c2d6b] via-[#1a4a8a] to-[#0e3570]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9] via-[#6BA8F5] to-white" />
 
-      <div className="absolute inset-0 hero-gradient-mesh" />
+      <div className="hero-glow-pulse absolute w-[500px] h-[500px] rounded-full bg-white/20 blur-[120px] top-[10%] left-[15%]" />
+      <div className="hero-glow-pulse absolute w-[400px] h-[400px] rounded-full bg-[#6ED3FF]/20 blur-[100px] top-[40%] right-[15%]" style={{ animationDelay: "3s" }} />
+      <div className="hero-glow-pulse absolute w-[300px] h-[300px] rounded-full bg-[#5EE6A8]/15 blur-[80px] bottom-[20%] left-[40%]" style={{ animationDelay: "5s" }} />
 
-      <div className="hero-glow-pulse absolute w-[500px] h-[500px] rounded-full bg-sky-400/15 blur-[100px] top-[20%] left-[15%]" />
-      <div className="hero-glow-pulse absolute w-[400px] h-[400px] rounded-full bg-cyan-300/12 blur-[80px] top-[50%] right-[20%]" style={{ animationDelay: "3s" }} />
-      <div className="hero-glow-pulse absolute w-[300px] h-[300px] rounded-full bg-blue-300/10 blur-[60px] bottom-[10%] left-[40%]" style={{ animationDelay: "5s" }} />
-
-      <div className="hero-ripple-1 absolute w-[700px] h-[700px] rounded-full border-2 border-cyan-300/25 top-[55%] left-[25%]" />
-      <div className="hero-ripple-2 absolute w-[500px] h-[500px] rounded-full border-2 border-sky-200/20 top-[35%] left-[55%]" />
-      <div className="hero-ripple-3 absolute w-[900px] h-[900px] rounded-full border border-blue-200/15 top-[45%] left-[35%]" />
-      <div className="hero-ripple-4 absolute w-[600px] h-[600px] rounded-full border-2 border-cyan-200/18 top-[60%] left-[45%]" />
-
-      {bubbles.map((b, i) => (
-        <div
+      {sparkles.map((s, i) => (
+        <motion.div
           key={i}
-          className="hero-bubble absolute rounded-full"
-          style={{
-            left: b.left,
-            bottom: b.bottom,
-            width: b.size,
-            height: b.size,
-            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,${b.opacity}), rgba(186,230,253,${b.opacity * 0.6}) 50%, transparent)`,
-            boxShadow: `0 0 ${b.size * 2.5}px rgba(186,230,253,${b.opacity * 0.4})`,
-            "--duration": b.duration,
-            "--delay": b.delay,
-          } as React.CSSProperties}
-        />
+          className="absolute"
+          style={{ left: s.left, top: s.top }}
+          animate={{
+            opacity: [0, 1, 0],
+            scale: [0.5, 1, 0.5],
+          }}
+          transition={{
+            duration: parseFloat(s.duration),
+            delay: parseFloat(s.delay),
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        >
+          <svg width={s.size * 3} height={s.size * 3} viewBox="0 0 24 24" fill="none">
+            <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" fill="white" fillOpacity="0.6" />
+          </svg>
+        </motion.div>
       ))}
 
-      <motion.div
-        className="absolute inset-0 hero-fiber-texture"
-        style={{ y: fiberY }}
-      />
-
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_30%_45%,transparent,rgba(12,45,107,0.4)_60%,rgba(12,45,107,0.7))]" />
-      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
     </div>
   );
 }
@@ -108,8 +97,8 @@ const technologies = [
     stat: "10x",
     statLabel: "More Powerful Than Home Vacuums",
     icon: Zap,
-    gradient: "from-amber-500 to-orange-600",
-    bgGlow: "bg-amber-500/10",
+    gradient: "from-[#6ED3FF] to-[#3A86E9]",
+    bgGlow: "bg-sky-500/10",
   },
   {
     id: "deep-fiber",
@@ -147,25 +136,25 @@ const testimonials = [
   {
     name: "James K.",
     location: "Westlands, Nairobi",
-    text: "Living near a construction site, the red soil was embedded deep in my Persian rug. CarpetPro's deep extraction brought back colors I'd forgotten existed.",
+    text: "Living near a construction site, the red soil was embedded deep in my Persian rug. Sparkle n' Glee's deep extraction brought back colors I'd forgotten existed.",
     rating: 5,
   },
   {
     name: "Amina O.",
     location: "Kilimani, Nairobi",
-    text: "With a toddler and two cats, chemical-free cleaning was non-negotiable. CarpetPro delivered — the carpet felt softer than when we first bought it!",
+    text: "With a toddler and two cats, chemical-free cleaning was non-negotiable. Sparkle n' Glee delivered — the carpet felt softer than when we first bought it!",
     rating: 5,
   },
   {
     name: "Peter N.",
     location: "Lavington, Nairobi",
-    text: "Our office carpets hadn't been properly cleaned in years. CarpetPro revived them in a single visit — the entire floor looks brand new. Highly recommend for corporate clients.",
+    text: "Our office carpets hadn't been properly cleaned in years. Sparkle n' Glee revived them in a single visit — the entire floor looks brand new. Highly recommend for corporate clients.",
     rating: 5,
   },
   {
     name: "Grace W.",
     location: "Runda, Nairobi",
-    text: "I've tried 4 different cleaning services. CarpetPro is the only one that didn't leave my silk carpet feeling stiff. They understand premium fabrics.",
+    text: "I've tried 4 different cleaning services. Sparkle n' Glee is the only one that didn't leave my silk carpet feeling stiff. They understand premium fabrics.",
     rating: 5,
   },
   {
@@ -224,18 +213,18 @@ function BeforeAfterGallery() {
 
   return (
     <>
-      <section className="py-20 sm:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden" data-testid="section-before-after">
+      <section className="py-20 sm:py-24 bg-gradient-to-b from-[#EBF3FF] via-white to-white relative overflow-hidden" data-testid="section-before-after">
         <div className="absolute w-80 h-80 rounded-full bg-primary/8 blur-3xl -top-20 -right-20" />
-        <div className="absolute w-64 h-64 rounded-full bg-emerald-500/8 blur-3xl bottom-0 left-10" />
+        <div className="absolute w-64 h-64 rounded-full bg-[#5EE6A8]/8 blur-3xl bottom-0 left-10" />
 
         <div className="relative z-10">
           <div className="text-center mb-12 px-4 sm:px-6 lg:px-8">
-            <Badge variant="secondary" className="mb-4 bg-white/10 border-white/20 text-white text-xs">Real Results</Badge>
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-before-after-title">
+            <Badge variant="secondary" className="mb-4 text-xs">Real Results</Badge>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground" data-testid="text-before-after-title">
               Before & <span className="text-primary">After</span>
             </h2>
-            <p className="mt-4 text-white/60 max-w-2xl mx-auto">
-              See the difference our Deep Extraction Technology makes. Every carpet tells a transformation story.
+            <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
+              See the sparkling difference we make. Every carpet tells a transformation story.
             </p>
           </div>
 
@@ -292,8 +281,8 @@ function BeforeAfterGallery() {
                     </div>
                   )}
                   <div className="mt-3 text-center">
-                    <p className="font-semibold text-sm text-white" data-testid={`text-gallery-title-${i}`}>{slide.title}</p>
-                    {slide.subtitle && <p className="text-xs text-white/50" data-testid={`text-gallery-subtitle-${i}`}>{slide.subtitle}</p>}
+                    <p className="font-semibold text-sm text-foreground" data-testid={`text-gallery-title-${i}`}>{slide.title}</p>
+                    {slide.subtitle && <p className="text-xs text-muted-foreground" data-testid={`text-gallery-subtitle-${i}`}>{slide.subtitle}</p>}
                   </div>
                 </div>
               ))}
@@ -301,7 +290,7 @@ function BeforeAfterGallery() {
           </div>
 
           <div className="text-center mt-10 px-4">
-            <p className="text-white/50 text-xs">Trusted by 5,000+ Nairobi homes and offices</p>
+            <p className="text-muted-foreground text-xs">Trusted by 5,000+ Nairobi homes and offices</p>
           </div>
         </div>
       </section>
@@ -410,7 +399,7 @@ function TestimonialsCarousel() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Client Stories</Badge>
-          <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-reviews-title">What Our Clients Say</h2>
+          <h2 className="text-3xl sm:text-4xl font-sans font-bold" data-testid="text-reviews-title">What Our Clients Say</h2>
         </div>
 
         <div
@@ -518,12 +507,9 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 h-16">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-serif text-xl font-bold" data-testid="text-brand-name">
-              <span className="text-muted-foreground">Carpet</span>Pro{" "}
-              <span className="italic text-primary">Executive</span>
+            <img src={logoClear} alt="Sparkle n' Glee" className="h-10 w-auto" />
+            <span className="text-xl font-bold text-primary" data-testid="text-brand-name">
+              Sparkle n' Glee
             </span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
@@ -553,37 +539,37 @@ export default function LandingPage() {
             className="max-w-3xl"
           >
             <motion.div variants={fadeUp}>
-              <Badge variant="secondary" className="mb-6 text-xs font-medium bg-white/10 text-white border-white/20 backdrop-blur-sm px-4 py-1.5" data-testid="badge-hero-tag">
-                <Zap className="w-3 h-3 mr-1.5 text-primary" />
-                Nairobi's Only Deep Extraction Carpet Specialists
+              <Badge variant="secondary" className="mb-6 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5" data-testid="badge-hero-tag">
+                <Sparkles className="w-3 h-3 mr-1.5" />
+                Sparkling, Spotless, Fast
               </Badge>
             </motion.div>
 
             <motion.h1
               variants={fadeUp}
-              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-white leading-[1.1] tracking-tight"
+              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.1] tracking-tight"
               data-testid="text-hero-title"
             >
-              Deep Extraction{" "}
+              Sparkling Clean{" "}
               <span className="relative">
-                <span className="text-primary">Technology</span>
+                <span className="text-[#5EE6A8]">Carpets</span>
                 <motion.span
-                  className="absolute -bottom-1 left-0 right-0 h-1 bg-primary/50 rounded-full"
+                  className="absolute -bottom-1 left-0 right-0 h-1 bg-[#5EE6A8]/50 rounded-full"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ delay: 0.8, duration: 0.6 }}
                 />
               </span>
               <br />
-              <span className="text-white/90">for Carpets That Feel New</span>
+              <span className="text-white/90">Fresh, Fast & Ready to Use</span>
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
-              className="mt-6 text-lg sm:text-xl text-white/70 max-w-2xl leading-relaxed"
+              className="mt-6 text-lg sm:text-xl text-white/80 max-w-2xl leading-relaxed"
               data-testid="text-hero-subtitle"
             >
-              Industrial-grade vortex extraction that removes deep-embedded dirt, red soil, and allergens — then returns your carpet dry and ready to use in as little as <strong className="text-white">2 hours</strong>.
+              We deep-clean your carpets, remove stubborn dirt, red soil and allergens — then return them dry, fresh and ready to enjoy in as little as <strong className="text-white">2 hours</strong>.
             </motion.p>
 
             <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
@@ -640,7 +626,7 @@ export default function LandingPage() {
               { value: "5,000+", label: "Carpets Cleaned", color: "text-emerald-500" },
             ].map((item) => (
               <motion.div key={item.label} variants={scaleIn} className="space-y-1">
-                <p className={`text-3xl sm:text-4xl font-serif font-bold ${item.color}`} data-testid={`text-stat-${item.label.replace(/\s+/g, '-').toLowerCase()}`}>
+                <p className={`text-3xl sm:text-4xl font-sans font-bold ${item.color}`} data-testid={`text-stat-${item.label.replace(/\s+/g, '-').toLowerCase()}`}>
                   {item.value}
                 </p>
                 <p className="text-xs sm:text-sm text-muted-foreground">{item.label}</p>
@@ -662,7 +648,7 @@ export default function LandingPage() {
             <motion.div variants={fadeUp}>
               <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Our Technology</Badge>
             </motion.div>
-            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold" data-testid="text-tech-title">
+            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-sans font-bold" data-testid="text-tech-title">
               Why Our Cleaning Is <span className="text-primary">Different</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
@@ -682,7 +668,7 @@ export default function LandingPage() {
               >
                 <motion.div variants={fadeUp} className={i % 2 === 1 ? "lg:order-2" : ""}>
                   <Badge variant="secondary" className="mb-4 text-xs">{tech.badge}</Badge>
-                  <h3 className="text-2xl sm:text-3xl font-serif font-bold mb-2" data-testid={`text-tech-${tech.id}`}>
+                  <h3 className="text-2xl sm:text-3xl font-sans font-bold mb-2" data-testid={`text-tech-${tech.id}`}>
                     {tech.title}
                   </h3>
                   <p className="text-sm font-medium text-primary mb-4">{tech.subtitle}</p>
@@ -717,7 +703,7 @@ export default function LandingPage() {
                       >
                         <tech.icon className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                       </motion.div>
-                      <p className={`text-5xl sm:text-6xl font-serif font-bold bg-gradient-to-br ${tech.gradient} bg-clip-text text-transparent`}>
+                      <p className={`text-5xl sm:text-6xl font-sans font-bold bg-gradient-to-br ${tech.gradient} bg-clip-text text-transparent`}>
                         {tech.stat}
                       </p>
                       <p className="text-sm text-muted-foreground mt-2 font-medium">{tech.statLabel}</p>
@@ -736,7 +722,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Simple Process</Badge>
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold" data-testid="text-how-title">How It Works</h2>
+            <h2 className="text-3xl sm:text-4xl font-sans font-bold" data-testid="text-how-title">How It Works</h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
               From estimate to delivery, we make the entire process seamless. No login required to get started.
             </p>
@@ -756,7 +742,7 @@ export default function LandingPage() {
                   <div className="hidden lg:block absolute top-7 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-primary/30 to-transparent" />
                 )}
                 <motion.div
-                  className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center mx-auto mb-4 text-xl font-bold font-serif relative z-10"
+                  className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center mx-auto mb-4 text-xl font-bold font-sans relative z-10"
                   whileHover={{ scale: 1.1 }}
                 >
                   {s.step}
@@ -782,7 +768,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             variants={stagger}
           >
-            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold mb-4" data-testid="text-cta-title">
+            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-sans font-bold mb-4" data-testid="text-cta-title">
               Ready for Carpets That Feel{" "}
               <span className="text-primary">Brand New</span>?
             </motion.h2>
@@ -810,43 +796,41 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t py-12 bg-slate-900 text-white">
+      <footer className="border-t py-12 bg-gradient-to-b from-[#EBF3FF] to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid sm:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-                </div>
-                <span className="font-serif font-bold">CarpetPro Executive</span>
+                <img src={logoClear} alt="Sparkle n' Glee" className="h-8 w-auto" />
+                <span className="font-bold text-primary">Sparkle n' Glee</span>
               </div>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Nairobi's premium carpet cleaning service using proprietary deep extraction technology.
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Nairobi's favourite carpet cleaning service. Sparkling, spotless, fast.
               </p>
             </div>
             <div>
-              <p className="font-semibold text-sm mb-3">Contact</p>
-              <div className="space-y-2 text-sm text-slate-400">
-                <a href={`tel:${PHONE_NUMBER}`} className="flex items-center gap-2 hover:text-white transition-colors">
+              <p className="font-semibold text-sm mb-3 text-foreground">Contact</p>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <a href={`tel:${PHONE_NUMBER}`} className="flex items-center gap-2 hover:text-primary transition-colors">
                   <Phone className="w-4 h-4" /> {PHONE_NUMBER}
                 </a>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-400 transition-colors">
+                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-500 transition-colors">
                   <MessageCircle className="w-4 h-4" /> WhatsApp Chat
                 </a>
               </div>
             </div>
             <div>
-              <p className="font-semibold text-sm mb-3">Quick Links</p>
-              <div className="space-y-2 text-sm text-slate-400">
-                <a href="#technology" className="block hover:text-white transition-colors">Our Technology</a>
-                <a href="#how-it-works" className="block hover:text-white transition-colors">How It Works</a>
-                <button onClick={() => navigate("/book")} className="block hover:text-white transition-colors">Get Free Estimate</button>
+              <p className="font-semibold text-sm mb-3 text-foreground">Quick Links</p>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <a href="#technology" className="block hover:text-primary transition-colors">Our Technology</a>
+                <a href="#how-it-works" className="block hover:text-primary transition-colors">How It Works</a>
+                <button onClick={() => navigate("/book")} className="block hover:text-primary transition-colors">Get Free Estimate</button>
               </div>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-white/10 text-center">
-            <p className="text-sm text-slate-500">
-              &copy; 2026 CarpetPro Executive. All rights reserved. Nairobi, Kenya.
+          <div className="mt-8 pt-8 border-t border-border text-center">
+            <p className="text-sm text-muted-foreground">
+              &copy; 2026 Sparkle n' Glee. All rights reserved. Nairobi, Kenya.
             </p>
           </div>
         </div>
