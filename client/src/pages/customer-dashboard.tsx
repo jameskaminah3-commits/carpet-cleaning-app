@@ -853,7 +853,7 @@ export default function CustomerDashboard() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
           <div className="flex items-center gap-2">
-            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-7 w-auto" />
+            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-9 w-auto drop-shadow-sm" />
             <span className="text-sm font-bold text-primary">
               Sparkle n' Glee
             </span>

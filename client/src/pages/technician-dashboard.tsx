@@ -62,9 +62,7 @@ export default function TechnicianDashboard() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-lg mx-auto px-4 flex items-center justify-between gap-2 h-16">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
+            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-9 w-auto drop-shadow-sm" />
             <span className="font-sans text-lg font-bold">My Tasks</span>
           </div>
           <div className="flex items-center gap-2">

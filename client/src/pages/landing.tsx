@@ -13,8 +13,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { Review, User, Media } from "@shared/schema";
 import logoClear from "@assets/ChatGPT_Image_Feb_23,_2026,_10_00_55_PM_1771873311337.png";
 
-const PHONE_NUMBER = "0707255598";
-const WHATSAPP_LINK = `https://wa.me/254707255598?text=${encodeURIComponent("Hi Sparkle n' Glee! I'd like to get a free estimate for carpet cleaning.")}`;
+const PHONE_NUMBER = "0745016805";
+const WHATSAPP_LINK = `https://wa.me/254745016805?text=${encodeURIComponent("Hi Sparkle n' Glee! I'd like to get a free estimate for carpet cleaning.")}`;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -876,7 +876,7 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <img src={logoClear} alt="Sparkle n' Glee" className="h-8 w-auto" />
+                <img src={logoClear} alt="Sparkle n' Glee" className="h-12 w-auto drop-shadow-sm" />
                 <span className="font-bold text-primary">Sparkle n' Glee</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">

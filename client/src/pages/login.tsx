@@ -62,7 +62,7 @@ export default function LoginPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex items-center gap-2">
-            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-8 w-auto" />
+            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-10 w-auto drop-shadow-sm" />
             <span className="text-lg font-bold text-primary">Sparkle n' Glee</span>
           </div>
         </div>

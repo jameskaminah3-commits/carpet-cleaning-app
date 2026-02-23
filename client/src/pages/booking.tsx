@@ -225,9 +225,7 @@ export default function BookingPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex items-center gap-2 flex-1">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
+            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-9 w-auto drop-shadow-sm" />
             <span className="font-sans text-lg font-bold">Book Cleaning</span>
           </div>
         </div>

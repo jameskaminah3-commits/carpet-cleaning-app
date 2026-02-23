@@ -1065,12 +1065,10 @@ export default function AdminDashboard() {
       <header className="sticky top-0 z-50 bg-slate-900 text-white">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
+            <img src="/logo-clear.png" alt="Sparkle n' Glee" className="h-9 w-auto drop-shadow-sm" />
             <div>
               <p className="text-sm font-bold">Admin Panel</p>
-              <p className="text-[10px] text-slate-400">Manage Everything</p>
+              <p className="text-[10px] text-slate-400">Sparkle n' Glee</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
