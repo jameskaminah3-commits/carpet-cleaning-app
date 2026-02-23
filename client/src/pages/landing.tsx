@@ -511,8 +511,8 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 h-16">
           <div className="flex items-center gap-2">
-            <img src={logoClear} alt="Sparkle n' Glee" className="h-10 w-auto" />
-            <span className="text-xl font-bold text-primary" data-testid="text-brand-name">
+            <img src="/logo-original.jpg" alt="Sparkle n' Glee" className="h-9 w-auto rounded-lg" />
+            <span className="text-lg sm:text-xl font-bold text-primary" data-testid="text-brand-name">
               Sparkle n' Glee
             </span>
           </div>
@@ -540,15 +540,16 @@ export default function LandingPage() {
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
         <HeroBackground />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 w-full">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 w-full">
+          <div className="grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
             <motion.div
               initial="hidden"
               animate="visible"
               variants={stagger}
+              className="text-center lg:text-left"
             >
               <motion.div variants={fadeUp}>
-                <Badge variant="secondary" className="mb-6 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 rounded-full" data-testid="badge-hero-tag">
+                <Badge variant="secondary" className="mb-5 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 rounded-full" data-testid="badge-hero-tag">
                   <Sparkles className="w-3 h-3 mr-1.5" />
                   Sparkling, Spotless, Fast
                 </Badge>
@@ -574,15 +575,38 @@ export default function LandingPage() {
                 </span>
               </motion.h1>
 
+              <motion.div
+                variants={fadeUp}
+                className="lg:hidden flex items-center justify-center relative my-4 h-[180px] sm:h-[220px]"
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.35)_0%,transparent_65%)]" />
+                <motion.div className="absolute top-2 right-8 text-white/40" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}><SparkleStarSVG size={16} /></motion.div>
+                <motion.div className="absolute top-8 left-6 text-white/30" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 3, repeat: Infinity, delay: 1.2 }}><SparkleStarSVG size={12} /></motion.div>
+                <motion.div className="absolute bottom-4 right-12 text-[#5EE6A8]/50" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity, delay: 0.8 }}><SparkleStarSVG size={18} /></motion.div>
+                <motion.div className="absolute bottom-10 left-10 text-[#6ED3FF]/40" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2.8, repeat: Infinity, delay: 1.5 }}><SparkleStarSVG size={10} /></motion.div>
+                <motion.img
+                  src={logoClear}
+                  alt="Sparkle n' Glee mascot"
+                  className="relative z-10 w-[150px] sm:w-[180px] h-auto drop-shadow-2xl"
+                  animate={{
+                    x: [0, 20, -12, 18, -8, 0],
+                    y: [0, -15, 8, -18, 12, 0],
+                    rotate: [0, 4, -3, 5, -2, 0],
+                  }}
+                  transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                  data-testid="img-hero-mascot-mobile"
+                />
+              </motion.div>
+
               <motion.p
                 variants={fadeUp}
-                className="mt-5 text-base sm:text-lg text-white/85 max-w-lg leading-relaxed"
+                className="mt-4 text-base sm:text-lg text-white/85 max-w-lg leading-relaxed mx-auto lg:mx-0"
                 data-testid="text-hero-subtitle"
               >
                 We deep-clean your carpets, remove stubborn dirt and allergens — and return them fresh, dry and ready to enjoy in as little as <strong className="text-white font-semibold">2 hours</strong>.
               </motion.p>
 
-              <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
+              <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-3 justify-center lg:justify-start">
                 <button
                   onClick={() => navigate("/book")}
                   className="inline-flex items-center gap-2 text-base font-semibold text-white px-8 py-3.5 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-lg shadow-blue-500/30 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-200"
@@ -602,7 +626,7 @@ export default function LandingPage() {
                 </a>
               </motion.div>
 
-              <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
+              <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-2 sm:gap-3 justify-center lg:justify-start">
                 {[
                   { icon: CheckCircle2, label: "Returns Dry & Ready", color: "text-[#5EE6A8]" },
                   { icon: Timer, label: "As Fast as 2 Hours", color: "text-[#6ED3FF]" },
@@ -611,10 +635,10 @@ export default function LandingPage() {
                 ].map((badge) => (
                   <div
                     key={badge.label}
-                    className="flex items-center gap-2 text-sm text-white/90 bg-white/15 backdrop-blur-[8px] rounded-[20px] px-4 py-2 shadow-sm"
+                    className="flex items-center gap-1.5 text-xs sm:text-sm text-white/90 bg-white/15 backdrop-blur-[8px] rounded-[20px] px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm"
                     data-testid={`badge-${badge.label.replace(/\s+/g, '-').toLowerCase()}`}
                   >
-                    <badge.icon className={`w-4 h-4 ${badge.color}`} />
+                    <badge.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${badge.color}`} />
                     <span>{badge.label}</span>
                   </div>
                 ))}
@@ -625,47 +649,23 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.7, type: "spring", damping: 20 }}
-              className="flex items-center justify-center relative mx-auto lg:mx-0 h-[220px] sm:h-[300px] lg:h-[380px]"
+              className="hidden lg:flex items-center justify-center relative h-[380px]"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.4)_0%,transparent_70%)]" />
 
-              <motion.div
-                className="absolute top-0 right-6 sm:top-4 sm:right-12 text-white/40"
-                animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-                transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
-              >
-                <SparkleStarSVG size={18} />
-              </motion.div>
-              <motion.div
-                className="absolute top-10 left-0 sm:top-20 sm:left-4 text-white/30"
-                animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-                transition={{ duration: 3, repeat: Infinity, delay: 1.2 }}
-              >
-                <SparkleStarSVG size={14} />
-              </motion.div>
-              <motion.div
-                className="absolute bottom-8 right-4 sm:bottom-16 sm:right-8 text-[#5EE6A8]/50"
-                animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity, delay: 0.8 }}
-              >
-                <SparkleStarSVG size={20} />
-              </motion.div>
-              <motion.div
-                className="absolute bottom-16 left-4 sm:bottom-28 sm:left-10 text-[#6ED3FF]/40"
-                animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
-                transition={{ duration: 2.8, repeat: Infinity, delay: 1.5 }}
-              >
-                <SparkleStarSVG size={12} />
-              </motion.div>
+              <motion.div className="absolute top-4 right-12 text-white/40" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}><SparkleStarSVG size={18} /></motion.div>
+              <motion.div className="absolute top-20 left-4 text-white/30" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 3, repeat: Infinity, delay: 1.2 }}><SparkleStarSVG size={14} /></motion.div>
+              <motion.div className="absolute bottom-16 right-8 text-[#5EE6A8]/50" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity, delay: 0.8 }}><SparkleStarSVG size={20} /></motion.div>
+              <motion.div className="absolute bottom-28 left-10 text-[#6ED3FF]/40" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2.8, repeat: Infinity, delay: 1.5 }}><SparkleStarSVG size={12} /></motion.div>
 
               <motion.img
                 src={logoClear}
                 alt="Sparkle n' Glee mascot"
-                className="relative z-10 w-[180px] sm:w-[240px] lg:w-[300px] h-auto drop-shadow-2xl"
+                className="relative z-10 w-[300px] h-auto drop-shadow-2xl"
                 animate={{
-                  x: [0, 25, -15, 20, -10, 0],
-                  y: [0, -20, 10, -25, 15, 0],
-                  rotate: [0, 5, -3, 4, -2, 0],
+                  x: [0, 30, -20, 25, -15, 0],
+                  y: [0, -25, 15, -30, 18, 0],
+                  rotate: [0, 6, -4, 5, -3, 0],
                 }}
                 transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
                 data-testid="img-hero-mascot"
