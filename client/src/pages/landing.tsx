@@ -589,11 +589,13 @@ export default function LandingPage() {
                   alt="Sparkle n' Glee mascot"
                   className="relative z-10 w-[150px] sm:w-[180px] h-auto drop-shadow-2xl"
                   animate={{
-                    x: [0, 20, -12, 18, -8, 0],
-                    y: [0, -15, 8, -18, 12, 0],
-                    rotate: [0, 4, -3, 5, -2, 0],
+                    x:       [0,   40,  40,  -50, -50,  60,  60,  -30, -30,  0],
+                    y:       [0,  -30, -30,   20,  20, -40, -40,   35,  35,  0],
+                    opacity: [1,  0.2,   1,  0.15,  1, 0.2,   1, 0.15,   1,  1],
+                    scale:   [1,  0.7,   1,  0.65,  1, 0.7,   1, 0.65,   1,  1],
+                    rotate:  [0,   8,    3,  -6,   -2,  10,   4,  -5,    0,  0],
                   }}
-                  transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
                   data-testid="img-hero-mascot-mobile"
                 />
               </motion.div>
@@ -663,11 +665,13 @@ export default function LandingPage() {
                 alt="Sparkle n' Glee mascot"
                 className="relative z-10 w-[300px] h-auto drop-shadow-2xl"
                 animate={{
-                  x: [0, 30, -20, 25, -15, 0],
-                  y: [0, -25, 15, -30, 18, 0],
-                  rotate: [0, 6, -4, 5, -3, 0],
+                  x:       [0,   60,   60, -70,  -70,  80,   80, -50,  -50,  0],
+                  y:       [0,  -45,  -45,  35,   35, -55,  -55,  50,   50,  0],
+                  opacity: [1,  0.15,   1, 0.1,    1, 0.15,   1, 0.1,    1,  1],
+                  scale:   [1,  0.6,    1, 0.55,   1, 0.6,    1, 0.55,   1,  1],
+                  rotate:  [0,  10,     5, -8,    -3,  12,    6,  -7,    0,  0],
                 }}
-                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
                 data-testid="img-hero-mascot"
               />
             </motion.div>
