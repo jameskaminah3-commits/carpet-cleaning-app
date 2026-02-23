@@ -540,142 +540,135 @@ export default function LandingPage() {
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
         <HeroBackground />
 
+        <motion.div
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5, duration: 0.8, type: "spring", damping: 18 }}
+          className="absolute inset-0 z-[5] pointer-events-none overflow-hidden"
+        >
+          <motion.div
+            className="absolute top-[12%] right-[8%] sm:top-[10%] sm:right-[12%] text-white/30"
+            animate={{ opacity: [0, 0.8, 0], scale: [0.4, 1.1, 0.4] }}
+            transition={{ duration: 3, repeat: Infinity, delay: 0.3 }}
+          ><SparkleStarSVG size={14} /></motion.div>
+          <motion.div
+            className="absolute top-[30%] left-[5%] sm:top-[25%] sm:left-[8%] text-[#5EE6A8]/35"
+            animate={{ opacity: [0, 0.7, 0], scale: [0.5, 1, 0.5] }}
+            transition={{ duration: 3.5, repeat: Infinity, delay: 1.0 }}
+          ><SparkleStarSVG size={10} /></motion.div>
+          <motion.div
+            className="absolute bottom-[20%] right-[15%] sm:bottom-[25%] sm:right-[20%] text-[#6ED3FF]/30"
+            animate={{ opacity: [0, 0.9, 0], scale: [0.3, 1.2, 0.3] }}
+            transition={{ duration: 2.8, repeat: Infinity, delay: 0.7 }}
+          ><SparkleStarSVG size={18} /></motion.div>
+          <motion.div
+            className="absolute bottom-[35%] left-[12%] sm:bottom-[30%] sm:left-[15%] text-white/25"
+            animate={{ opacity: [0, 0.6, 0], scale: [0.5, 1, 0.5] }}
+            transition={{ duration: 4, repeat: Infinity, delay: 1.8 }}
+          ><SparkleStarSVG size={8} /></motion.div>
+          <motion.div
+            className="absolute top-[55%] right-[5%] sm:top-[50%] sm:right-[6%] text-[#C8A2F8]/25"
+            animate={{ opacity: [0, 0.7, 0], scale: [0.4, 1, 0.4] }}
+            transition={{ duration: 3.2, repeat: Infinity, delay: 2.2 }}
+          ><SparkleStarSVG size={12} /></motion.div>
+
+          <motion.img
+            src={logoClear}
+            alt="Sparkle n' Glee mascot"
+            className="absolute top-1/2 left-1/2 w-[100px] sm:w-[140px] lg:w-[200px] h-auto drop-shadow-2xl"
+            style={{ marginTop: "-50px", marginLeft: "-50px" }}
+            animate={{
+              x:       ["30vw",  "-25vw", "-25vw", "20vw",  "20vw",  "-35vw", "-35vw", "10vw",  "10vw",  "30vw"],
+              y:       ["-30vh", "15vh",  "15vh",  "-35vh", "-35vh", "10vh",  "10vh",  "-20vh", "-20vh", "-30vh"],
+              opacity: [0.85,    0.1,     0.9,     0.08,    0.85,    0.1,     0.9,     0.08,    0.85,    0.85],
+              scale:   [1,       0.4,     1,       0.35,    1,       0.4,     1,       0.35,    1,       1],
+              rotate:  [0,       15,      -5,      -12,     3,       18,      -8,      -15,     5,       0],
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+            data-testid="img-hero-mascot"
+          />
+        </motion.div>
+
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 w-full">
-          <div className="grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={stagger}
-              className="text-center lg:text-left"
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={stagger}
+            className="max-w-2xl"
+          >
+            <motion.div variants={fadeUp}>
+              <Badge variant="secondary" className="mb-5 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 rounded-full" data-testid="badge-hero-tag">
+                <Sparkles className="w-3 h-3 mr-1.5" />
+                Sparkling, Spotless, Fast
+              </Badge>
+            </motion.div>
+
+            <motion.h1
+              variants={fadeUp}
+              className="font-bold text-white leading-[1.12] tracking-tight"
+              style={{ fontSize: "clamp(2rem, 5vw, 4rem)" }}
+              data-testid="text-hero-title"
             >
-              <motion.div variants={fadeUp}>
-                <Badge variant="secondary" className="mb-5 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 rounded-full" data-testid="badge-hero-tag">
-                  <Sparkles className="w-3 h-3 mr-1.5" />
-                  Sparkling, Spotless, Fast
-                </Badge>
-              </motion.div>
-
-              <motion.h1
-                variants={fadeUp}
-                className="font-bold text-white leading-[1.12] tracking-tight"
-                style={{ fontSize: "clamp(2rem, 5vw, 4rem)" }}
-                data-testid="text-hero-title"
-              >
-                Carpets So Clean,{" "}
-                <br className="hidden sm:block" />
-                They Practically{" "}
-                <span className="relative inline-block">
-                  <span className="text-[#5EE6A8]">Sparkle</span>
-                  <motion.span
-                    className="absolute -bottom-1.5 left-0 right-0 h-[3px] bg-[#5EE6A8]/60 rounded-full"
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: 1 }}
-                    transition={{ delay: 0.8, duration: 0.6 }}
-                  />
-                </span>
-              </motion.h1>
-
-              <motion.div
-                variants={fadeUp}
-                className="lg:hidden flex items-center justify-center relative my-4 h-[180px] sm:h-[220px]"
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.35)_0%,transparent_65%)]" />
-                <motion.div className="absolute top-2 right-8 text-white/40" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}><SparkleStarSVG size={16} /></motion.div>
-                <motion.div className="absolute top-8 left-6 text-white/30" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 3, repeat: Infinity, delay: 1.2 }}><SparkleStarSVG size={12} /></motion.div>
-                <motion.div className="absolute bottom-4 right-12 text-[#5EE6A8]/50" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity, delay: 0.8 }}><SparkleStarSVG size={18} /></motion.div>
-                <motion.div className="absolute bottom-10 left-10 text-[#6ED3FF]/40" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2.8, repeat: Infinity, delay: 1.5 }}><SparkleStarSVG size={10} /></motion.div>
-                <motion.img
-                  src={logoClear}
-                  alt="Sparkle n' Glee mascot"
-                  className="relative z-10 w-[150px] sm:w-[180px] h-auto drop-shadow-2xl"
-                  animate={{
-                    x:       [0,   40,  40,  -50, -50,  60,  60,  -30, -30,  0],
-                    y:       [0,  -30, -30,   20,  20, -40, -40,   35,  35,  0],
-                    opacity: [1,  0.2,   1,  0.15,  1, 0.2,   1, 0.15,   1,  1],
-                    scale:   [1,  0.7,   1,  0.65,  1, 0.7,   1, 0.65,   1,  1],
-                    rotate:  [0,   8,    3,  -6,   -2,  10,   4,  -5,    0,  0],
-                  }}
-                  transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-                  data-testid="img-hero-mascot-mobile"
+              Carpets So Clean,{" "}
+              <br className="hidden sm:block" />
+              They Practically{" "}
+              <span className="relative inline-block">
+                <span className="text-[#5EE6A8]">Sparkle</span>
+                <motion.span
+                  className="absolute -bottom-1.5 left-0 right-0 h-[3px] bg-[#5EE6A8]/60 rounded-full"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.8, duration: 0.6 }}
                 />
-              </motion.div>
+              </span>
+            </motion.h1>
 
-              <motion.p
-                variants={fadeUp}
-                className="mt-4 text-base sm:text-lg text-white/85 max-w-lg leading-relaxed mx-auto lg:mx-0"
-                data-testid="text-hero-subtitle"
-              >
-                We deep-clean your carpets, remove stubborn dirt and allergens — and return them fresh, dry and ready to enjoy in as little as <strong className="text-white font-semibold">2 hours</strong>.
-              </motion.p>
-
-              <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-3 justify-center lg:justify-start">
-                <button
-                  onClick={() => navigate("/book")}
-                  className="inline-flex items-center gap-2 text-base font-semibold text-white px-8 py-3.5 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-lg shadow-blue-500/30 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-200"
-                  data-testid="button-hero-estimate"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Get My Free Quote
-                </button>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                  <button
-                    className="inline-flex items-center gap-2 text-base font-semibold text-white px-7 py-3.5 rounded-full bg-[#25D366] shadow-lg shadow-green-500/25 hover:scale-105 hover:shadow-xl hover:shadow-green-500/35 transition-all duration-200"
-                    data-testid="button-hero-whatsapp"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Chat on WhatsApp
-                  </button>
-                </a>
-              </motion.div>
-
-              <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-2 sm:gap-3 justify-center lg:justify-start">
-                {[
-                  { icon: CheckCircle2, label: "Returns Dry & Ready", color: "text-[#5EE6A8]" },
-                  { icon: Timer, label: "As Fast as 2 Hours", color: "text-[#6ED3FF]" },
-                  { icon: Shield, label: "Zero Chemical Residue", color: "text-[#C8A2F8]" },
-                  { icon: Baby, label: "Safe for Kids & Pets", color: "text-[#FFB3C6]" },
-                ].map((badge) => (
-                  <div
-                    key={badge.label}
-                    className="flex items-center gap-1.5 text-xs sm:text-sm text-white/90 bg-white/15 backdrop-blur-[8px] rounded-[20px] px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm"
-                    data-testid={`badge-${badge.label.replace(/\s+/g, '-').toLowerCase()}`}
-                  >
-                    <badge.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${badge.color}`} />
-                    <span>{badge.label}</span>
-                  </div>
-                ))}
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.7, type: "spring", damping: 20 }}
-              className="hidden lg:flex items-center justify-center relative h-[380px]"
+            <motion.p
+              variants={fadeUp}
+              className="mt-5 text-base sm:text-lg text-white/85 max-w-lg leading-relaxed"
+              data-testid="text-hero-subtitle"
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.4)_0%,transparent_70%)]" />
+              We deep-clean your carpets, remove stubborn dirt and allergens — and return them fresh, dry and ready to enjoy in as little as <strong className="text-white font-semibold">2 hours</strong>.
+            </motion.p>
 
-              <motion.div className="absolute top-4 right-12 text-white/40" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}><SparkleStarSVG size={18} /></motion.div>
-              <motion.div className="absolute top-20 left-4 text-white/30" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 3, repeat: Infinity, delay: 1.2 }}><SparkleStarSVG size={14} /></motion.div>
-              <motion.div className="absolute bottom-16 right-8 text-[#5EE6A8]/50" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity, delay: 0.8 }}><SparkleStarSVG size={20} /></motion.div>
-              <motion.div className="absolute bottom-28 left-10 text-[#6ED3FF]/40" animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }} transition={{ duration: 2.8, repeat: Infinity, delay: 1.5 }}><SparkleStarSVG size={12} /></motion.div>
-
-              <motion.img
-                src={logoClear}
-                alt="Sparkle n' Glee mascot"
-                className="relative z-10 w-[300px] h-auto drop-shadow-2xl"
-                animate={{
-                  x:       [0,   60,   60, -70,  -70,  80,   80, -50,  -50,  0],
-                  y:       [0,  -45,  -45,  35,   35, -55,  -55,  50,   50,  0],
-                  opacity: [1,  0.15,   1, 0.1,    1, 0.15,   1, 0.1,    1,  1],
-                  scale:   [1,  0.6,    1, 0.55,   1, 0.6,    1, 0.55,   1,  1],
-                  rotate:  [0,  10,     5, -8,    -3,  12,    6,  -7,    0,  0],
-                }}
-                transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-                data-testid="img-hero-mascot"
-              />
+            <motion.div variants={fadeUp} className="mt-7 flex flex-wrap gap-3">
+              <button
+                onClick={() => navigate("/book")}
+                className="inline-flex items-center gap-2 text-base font-semibold text-white px-8 py-3.5 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-lg shadow-blue-500/30 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-200"
+                data-testid="button-hero-estimate"
+              >
+                <Sparkles className="w-4 h-4" />
+                Get My Free Quote
+              </button>
+              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                <button
+                  className="inline-flex items-center gap-2 text-base font-semibold text-white px-7 py-3.5 rounded-full bg-[#25D366] shadow-lg shadow-green-500/25 hover:scale-105 hover:shadow-xl hover:shadow-green-500/35 transition-all duration-200"
+                  data-testid="button-hero-whatsapp"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Chat on WhatsApp
+                </button>
+              </a>
             </motion.div>
-          </div>
+
+            <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-2 sm:gap-3">
+              {[
+                { icon: CheckCircle2, label: "Returns Dry & Ready", color: "text-[#5EE6A8]" },
+                { icon: Timer, label: "As Fast as 2 Hours", color: "text-[#6ED3FF]" },
+                { icon: Shield, label: "Zero Chemical Residue", color: "text-[#C8A2F8]" },
+                { icon: Baby, label: "Safe for Kids & Pets", color: "text-[#FFB3C6]" },
+              ].map((badge) => (
+                <div
+                  key={badge.label}
+                  className="flex items-center gap-1.5 text-xs sm:text-sm text-white/90 bg-white/15 backdrop-blur-[8px] rounded-[20px] px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm"
+                  data-testid={`badge-${badge.label.replace(/\s+/g, '-').toLowerCase()}`}
+                >
+                  <badge.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${badge.color}`} />
+                  <span>{badge.label}</span>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
