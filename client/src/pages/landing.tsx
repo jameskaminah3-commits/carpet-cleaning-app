@@ -30,32 +30,40 @@ const scaleIn = {
   visible: { opacity: 1, scale: 1 },
 };
 
+function SparkleStarSVG({ size = 16, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 function HeroBackground() {
   const sparkles = useMemo(() =>
-    Array.from({ length: 20 }, (_, i) => ({
-      left: `${5 + (i * 4.7) % 90}%`,
-      top: `${5 + (i * 5.3) % 85}%`,
-      size: 3 + (i % 4) * 2,
+    Array.from({ length: 25 }, (_, i) => ({
+      left: `${3 + (i * 3.9) % 94}%`,
+      top: `${3 + (i * 4.1) % 90}%`,
+      size: 3 + (i % 5) * 2,
       duration: `${3 + (i % 5) * 1.5}s`,
-      delay: `${(i * 0.5) % 8}s`,
+      delay: `${(i * 0.4) % 8}s`,
     })), []);
 
   return (
     <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9] via-[#6BA8F5] to-white" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9] via-[#5A9DF5] to-[#C8DFFF]" />
 
-      <div className="hero-glow-pulse absolute w-[500px] h-[500px] rounded-full bg-white/20 blur-[120px] top-[10%] left-[15%]" />
-      <div className="hero-glow-pulse absolute w-[400px] h-[400px] rounded-full bg-[#6ED3FF]/20 blur-[100px] top-[40%] right-[15%]" style={{ animationDelay: "3s" }} />
-      <div className="hero-glow-pulse absolute w-[300px] h-[300px] rounded-full bg-[#5EE6A8]/15 blur-[80px] bottom-[20%] left-[40%]" style={{ animationDelay: "5s" }} />
+      <div className="hero-glow-pulse absolute w-[500px] h-[500px] rounded-full bg-white/25 blur-[120px] top-[10%] left-[10%]" />
+      <div className="hero-glow-pulse absolute w-[400px] h-[400px] rounded-full bg-[#6ED3FF]/25 blur-[100px] top-[30%] right-[10%]" style={{ animationDelay: "3s" }} />
+      <div className="hero-glow-pulse absolute w-[350px] h-[350px] rounded-full bg-[#5EE6A8]/15 blur-[90px] bottom-[15%] left-[35%]" style={{ animationDelay: "5s" }} />
 
       {sparkles.map((s, i) => (
         <motion.div
           key={i}
-          className="absolute"
+          className="absolute text-white/50"
           style={{ left: s.left, top: s.top }}
           animate={{
-            opacity: [0, 1, 0],
-            scale: [0.5, 1, 0.5],
+            opacity: [0, 0.8, 0],
+            scale: [0.3, 1, 0.3],
           }}
           transition={{
             duration: parseFloat(s.duration),
@@ -64,13 +72,9 @@ function HeroBackground() {
             ease: "easeInOut",
           }}
         >
-          <svg width={s.size * 3} height={s.size * 3} viewBox="0 0 24 24" fill="none">
-            <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" fill="white" fillOpacity="0.6" />
-          </svg>
+          <SparkleStarSVG size={s.size * 3} />
         </motion.div>
       ))}
-
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
     </div>
   );
 }
@@ -518,12 +522,17 @@ export default function LandingPage() {
             <a href="#testimonials" className="hover:text-foreground transition-colors" data-testid="link-testimonials">Reviews</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate("/login")} data-testid="button-login">
+            <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate("/login")} data-testid="button-login">
               Sign In
             </Button>
-            <Button size="sm" onClick={() => navigate("/book")} data-testid="button-book-now">
-              Free Estimate
-            </Button>
+            <button
+              onClick={() => navigate("/book")}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-white px-5 py-2 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-md hover:scale-105 transition-all duration-200"
+              data-testid="button-book-now"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Free Quote
+            </button>
           </div>
         </div>
       </header>
@@ -531,82 +540,134 @@ export default function LandingPage() {
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
         <HeroBackground />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={stagger}
-            className="max-w-3xl"
-          >
-            <motion.div variants={fadeUp}>
-              <Badge variant="secondary" className="mb-6 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5" data-testid="badge-hero-tag">
-                <Sparkles className="w-3 h-3 mr-1.5" />
-                Sparkling, Spotless, Fast
-              </Badge>
-            </motion.div>
-
-            <motion.h1
-              variants={fadeUp}
-              className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.1] tracking-tight"
-              data-testid="text-hero-title"
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 w-full">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={stagger}
             >
-              Sparkling Clean{" "}
-              <span className="relative">
-                <span className="text-[#5EE6A8]">Carpets</span>
-                <motion.span
-                  className="absolute -bottom-1 left-0 right-0 h-1 bg-[#5EE6A8]/50 rounded-full"
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ delay: 0.8, duration: 0.6 }}
-                />
-              </span>
-              <br />
-              <span className="text-white/90">Fresh, Fast & Ready to Use</span>
-            </motion.h1>
+              <motion.div variants={fadeUp}>
+                <Badge variant="secondary" className="mb-6 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 rounded-full" data-testid="badge-hero-tag">
+                  <Sparkles className="w-3 h-3 mr-1.5" />
+                  Sparkling, Spotless, Fast
+                </Badge>
+              </motion.div>
 
-            <motion.p
-              variants={fadeUp}
-              className="mt-6 text-lg sm:text-xl text-white/80 max-w-2xl leading-relaxed"
-              data-testid="text-hero-subtitle"
+              <motion.h1
+                variants={fadeUp}
+                className="font-bold text-white leading-[1.12] tracking-tight"
+                style={{ fontSize: "clamp(2rem, 5vw, 4rem)" }}
+                data-testid="text-hero-title"
+              >
+                Carpets So Clean,{" "}
+                <br className="hidden sm:block" />
+                They Practically{" "}
+                <span className="relative inline-block">
+                  <span className="text-[#5EE6A8]">Sparkle</span>
+                  <motion.span
+                    className="absolute -bottom-1.5 left-0 right-0 h-[3px] bg-[#5EE6A8]/60 rounded-full"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: 0.8, duration: 0.6 }}
+                  />
+                </span>
+              </motion.h1>
+
+              <motion.p
+                variants={fadeUp}
+                className="mt-5 text-base sm:text-lg text-white/85 max-w-lg leading-relaxed"
+                data-testid="text-hero-subtitle"
+              >
+                We deep-clean your carpets, remove stubborn dirt and allergens — and return them fresh, dry and ready to enjoy in as little as <strong className="text-white font-semibold">2 hours</strong>.
+              </motion.p>
+
+              <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
+                <button
+                  onClick={() => navigate("/book")}
+                  className="inline-flex items-center gap-2 text-base font-semibold text-white px-8 py-3.5 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-lg shadow-blue-500/30 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-200"
+                  data-testid="button-hero-estimate"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Get My Free Quote
+                </button>
+                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                  <button
+                    className="inline-flex items-center gap-2 text-base font-semibold text-white px-7 py-3.5 rounded-full bg-[#25D366] shadow-lg shadow-green-500/25 hover:scale-105 hover:shadow-xl hover:shadow-green-500/35 transition-all duration-200"
+                    data-testid="button-hero-whatsapp"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Chat on WhatsApp
+                  </button>
+                </a>
+              </motion.div>
+
+              <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
+                {[
+                  { icon: CheckCircle2, label: "Returns Dry & Ready", color: "text-[#5EE6A8]" },
+                  { icon: Timer, label: "As Fast as 2 Hours", color: "text-[#6ED3FF]" },
+                  { icon: Shield, label: "Zero Chemical Residue", color: "text-[#C8A2F8]" },
+                  { icon: Baby, label: "Safe for Kids & Pets", color: "text-[#FFB3C6]" },
+                ].map((badge) => (
+                  <div
+                    key={badge.label}
+                    className="flex items-center gap-2 text-sm text-white/90 bg-white/15 backdrop-blur-[8px] rounded-[20px] px-4 py-2 shadow-sm"
+                    data-testid={`badge-${badge.label.replace(/\s+/g, '-').toLowerCase()}`}
+                  >
+                    <badge.icon className={`w-4 h-4 ${badge.color}`} />
+                    <span>{badge.label}</span>
+                  </div>
+                ))}
+              </motion.div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.7, type: "spring", damping: 20 }}
+              className="hidden lg:flex items-center justify-center relative"
             >
-              We deep-clean your carpets, remove stubborn dirt, red soil and allergens — then return them dry, fresh and ready to enjoy in as little as <strong className="text-white">2 hours</strong>.
-            </motion.p>
+              <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.4)_0%,transparent_70%)]" />
 
-            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => navigate("/book")} className="text-base px-8 h-13 shadow-lg shadow-primary/25" data-testid="button-hero-estimate">
-                Get a Free Estimate <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-              <a href={`tel:${PHONE_NUMBER}`}>
-                <Button size="lg" variant="outline" className="bg-white/5 border-white/20 text-white backdrop-blur-sm text-base h-13" data-testid="button-hero-call">
-                  <Phone className="mr-2 w-4 h-4" /> Call Us Now
-                </Button>
-              </a>
-              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className="bg-green-500/10 border-green-500/30 text-green-400 backdrop-blur-sm text-base h-13" data-testid="button-hero-whatsapp">
-                  <MessageCircle className="mr-2 w-4 h-4" /> Chat on WhatsApp
-                </Button>
-              </a>
-            </motion.div>
+              <motion.div
+                className="absolute top-4 right-12 text-white/40"
+                animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
+                transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+              >
+                <SparkleStarSVG size={18} />
+              </motion.div>
+              <motion.div
+                className="absolute top-20 left-4 text-white/30"
+                animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
+                transition={{ duration: 3, repeat: Infinity, delay: 1.2 }}
+              >
+                <SparkleStarSVG size={14} />
+              </motion.div>
+              <motion.div
+                className="absolute bottom-16 right-8 text-[#5EE6A8]/50"
+                animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity, delay: 0.8 }}
+              >
+                <SparkleStarSVG size={20} />
+              </motion.div>
+              <motion.div
+                className="absolute bottom-28 left-10 text-[#6ED3FF]/40"
+                animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 0.5] }}
+                transition={{ duration: 2.8, repeat: Infinity, delay: 1.5 }}
+              >
+                <SparkleStarSVG size={12} />
+              </motion.div>
 
-            <motion.div variants={fadeUp} className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-white/60">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-400" />
-                <span>Returns Dry & Ready</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Timer className="w-4 h-4 text-primary" />
-                <span>As Fast as 2 Hours</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-purple-400" />
-                <span>Zero Chemical Residue</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Baby className="w-4 h-4 text-pink-400" />
-                <span>Safe for Kids & Pets</span>
-              </div>
+              <motion.img
+                src={logoClear}
+                alt="Sparkle n' Glee mascot"
+                className="relative z-10 w-[320px] h-auto drop-shadow-2xl"
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                data-testid="img-hero-mascot"
+              />
             </motion.div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -687,9 +748,14 @@ export default function LandingPage() {
                       </div>
                     </div>
                   )}
-                  <Button size="lg" onClick={() => navigate("/book")} data-testid={`button-estimate-${tech.id}`}>
-                    Get a Free Estimate <ArrowRight className="ml-2 w-4 h-4" />
-                  </Button>
+                  <button
+                    onClick={() => navigate("/book")}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-lg shadow-blue-500/20 hover:scale-105 hover:shadow-xl transition-all duration-200"
+                    data-testid={`button-estimate-${tech.id}`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Get a Free Quote
+                  </button>
                 </motion.div>
 
                 <motion.div variants={scaleIn} className={`relative ${i % 2 === 1 ? "lg:order-1" : ""}`}>
@@ -776,21 +842,29 @@ export default function LandingPage() {
               Get your free estimate in under 2 minutes. No login required — just tell us about your carpets and we'll handle the rest.
             </motion.p>
             <motion.div variants={fadeUp} className="flex flex-wrap gap-3 justify-center">
-              <Button size="lg" onClick={() => navigate("/book")} className="text-base px-8 h-13 shadow-lg shadow-primary/25" data-testid="button-cta-estimate">
-                Get a Free Estimate <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-              <a href={`tel:${PHONE_NUMBER}`}>
-                <Button size="lg" variant="outline" className="text-base h-13" data-testid="button-cta-call">
-                  <Phone className="mr-2 w-4 h-4" /> {PHONE_NUMBER}
-                </Button>
+              <button
+                onClick={() => navigate("/book")}
+                className="inline-flex items-center gap-2 text-base font-semibold text-white px-8 py-3.5 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-lg shadow-blue-500/25 hover:scale-105 hover:shadow-xl transition-all duration-200"
+                data-testid="button-cta-estimate"
+              >
+                <Sparkles className="w-4 h-4" />
+                Get My Free Quote
+              </button>
+              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                <button
+                  className="inline-flex items-center gap-2 text-base font-semibold text-white px-7 py-3.5 rounded-full bg-[#25D366] shadow-lg shadow-green-500/20 hover:scale-105 hover:shadow-xl transition-all duration-200"
+                  data-testid="button-cta-whatsapp"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Chat on WhatsApp
+                </button>
               </a>
             </motion.div>
             <motion.p variants={fadeUp} className="mt-6 text-sm text-muted-foreground">
-              Or chat with us on{" "}
-              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="text-green-600 font-medium hover:underline" data-testid="link-whatsapp-cta">
-                WhatsApp
-              </a>{" "}
-              for instant answers
+              Or call us directly at{" "}
+              <a href={`tel:${PHONE_NUMBER}`} className="text-primary font-medium hover:underline" data-testid="link-phone-cta">
+                {PHONE_NUMBER}
+              </a>
             </motion.p>
           </motion.div>
         </div>
