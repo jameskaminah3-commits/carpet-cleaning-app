@@ -622,10 +622,10 @@ export default function LandingPage() {
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.85, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.7, type: "spring", damping: 20 }}
-              className="flex items-center justify-center relative mx-auto lg:mx-0"
+              className="flex items-center justify-center relative mx-auto lg:mx-0 h-[220px] sm:h-[300px] lg:h-[380px]"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.4)_0%,transparent_70%)]" />
 
@@ -661,9 +661,13 @@ export default function LandingPage() {
               <motion.img
                 src={logoClear}
                 alt="Sparkle n' Glee mascot"
-                className="relative z-10 w-[200px] sm:w-[260px] lg:w-[320px] h-auto drop-shadow-2xl"
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="relative z-10 w-[180px] sm:w-[240px] lg:w-[300px] h-auto drop-shadow-2xl"
+                animate={{
+                  x: [0, 25, -15, 20, -10, 0],
+                  y: [0, -20, 10, -25, 15, 0],
+                  rotate: [0, 5, -3, 4, -2, 0],
+                }}
+                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
                 data-testid="img-hero-mascot"
               />
             </motion.div>
