@@ -12,6 +12,14 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { Review, User, Media } from "@shared/schema";
 import logoClear from "@assets/mascot-logo-clear.png";
+import imgSisalJute from "@assets/Sisal_Jute_1771953293164.jpg";
+import imgPersian from "@assets/persian_oriental_1771953293167.jpg";
+import imgFrieze from "@assets/frieze_carpet_1771953293167.jpg";
+import imgBerber from "@assets/berber-carpet_1771953293168.jpg";
+import imgShag from "@assets/Shag_carpet_1771953293168.jpg";
+import imgWallToWall from "@assets/wall_to_wall_carpet_1771953293169.jpg";
+import imgFluffy from "@assets/fluffy_carpet_1771953293170.jpeg";
+import imgSilk from "@assets/silk_carpets_1771953315954.webp";
 
 const PHONE_NUMBER = "0745016805";
 const WHATSAPP_LINK = `https://wa.me/254745016805?text=${encodeURIComponent("Hi Sparkle n' Glee! I'd like to get a free estimate for carpet cleaning.")}`;
@@ -722,14 +730,17 @@ export default function LandingPage() {
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
             variants={stagger}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5"
           >
             {[
-              { name: "Shaggy / Fluffy", img: "/images/carpet-shaggy.jpg", desc: "Lifts & fluffs long fibers, removes pet hair & dust — no matting.", color: "from-purple-50 to-pink-50 border-purple-100" },
-              { name: "Wall-to-Wall", img: "/images/carpet-wall-to-wall.jpg", desc: "Even deep clean for big rooms & offices — handles high traffic & red soil.", color: "from-blue-50 to-cyan-50 border-blue-100" },
-              { name: "Persian / Patterned", img: "/images/carpet-persian.jpg", desc: "Gentle on designs & wool — revives colors, lifts stains.", color: "from-amber-50 to-orange-50 border-amber-100" },
-              { name: "Berber / Loop", img: "/images/carpet-berber.jpg", desc: "Pulls embedded grime from loops — stays springy & footprint-free.", color: "from-emerald-50 to-teal-50 border-emerald-100" },
-              { name: "Everyday Synthetic", img: "/images/carpet-synthetic.jpg", desc: "Deeper than DIY — extracts dust for that brand-new feel.", color: "from-sky-50 to-indigo-50 border-sky-100" },
+              { name: "Shag Carpet", img: imgShag, desc: "Deep-pile luxury — we restore volume & remove trapped dust.", color: "from-stone-50 to-neutral-50 border-stone-100" },
+              { name: "Fluffy Carpet", img: imgFluffy, desc: "Lifts & fluffs long fibers, removes pet hair — no matting.", color: "from-purple-50 to-pink-50 border-purple-100" },
+              { name: "Wall-to-Wall", img: imgWallToWall, desc: "Even deep clean for big rooms & offices — handles high traffic.", color: "from-blue-50 to-cyan-50 border-blue-100" },
+              { name: "Persian / Oriental", img: imgPersian, desc: "Gentle on designs & wool — revives colors, lifts stains.", color: "from-amber-50 to-orange-50 border-amber-100" },
+              { name: "Berber Carpet", img: imgBerber, desc: "Pulls embedded grime from loops — stays springy & clean.", color: "from-emerald-50 to-teal-50 border-emerald-100" },
+              { name: "Frieze Carpet", img: imgFrieze, desc: "Twisted fibers refreshed — extracts deep dirt, restores bounce.", color: "from-sky-50 to-indigo-50 border-sky-100" },
+              { name: "Sisal / Jute", img: imgSisalJute, desc: "Natural fiber care — gentle cleaning that preserves texture.", color: "from-yellow-50 to-amber-50 border-yellow-100" },
+              { name: "Silk Carpet", img: imgSilk, desc: "Delicate luxury treatment — preserves sheen & intricate patterns.", color: "from-teal-50 to-cyan-50 border-teal-100" },
             ].map((carpet) => (
               <motion.div
                 key={carpet.name}
