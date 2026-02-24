@@ -11,7 +11,7 @@ import {
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { Review, User, Media } from "@shared/schema";
-import logoClear from "@assets/ChatGPT_Image_Feb_23,_2026,_10_00_55_PM_1771873311337.png";
+import logoClear from "@assets/mascot-logo-clear.png";
 
 const PHONE_NUMBER = "0745016805";
 const WHATSAPP_LINK = `https://wa.me/254745016805?text=${encodeURIComponent("Hi Sparkle n' Glee! I'd like to get a free estimate for carpet cleaning.")}`;
