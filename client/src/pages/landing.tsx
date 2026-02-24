@@ -725,24 +725,29 @@ export default function LandingPage() {
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
           >
             {[
-              { name: "Shaggy / Fluffy", icon: "🧶", desc: "Lifts & fluffs long fibers, removes pet hair & dust — no matting.", color: "from-purple-50 to-pink-50 border-purple-100" },
-              { name: "Wall-to-Wall", icon: "🏠", desc: "Even deep clean for big rooms & offices — handles high traffic & red soil.", color: "from-blue-50 to-cyan-50 border-blue-100" },
-              { name: "Persian / Patterned", icon: "🎨", desc: "Gentle on designs & wool — revives colors, lifts stains.", color: "from-amber-50 to-orange-50 border-amber-100" },
-              { name: "Berber / Loop", icon: "🔄", desc: "Pulls embedded grime from loops — stays springy & footprint-free.", color: "from-emerald-50 to-teal-50 border-emerald-100" },
-              { name: "Everyday Synthetic", icon: "✨", desc: "Deeper than DIY — extracts dust for that brand-new feel.", color: "from-sky-50 to-indigo-50 border-sky-100" },
+              { name: "Shaggy / Fluffy", img: "/images/carpet-shaggy.jpg", desc: "Lifts & fluffs long fibers, removes pet hair & dust — no matting.", color: "from-purple-50 to-pink-50 border-purple-100" },
+              { name: "Wall-to-Wall", img: "/images/carpet-wall-to-wall.jpg", desc: "Even deep clean for big rooms & offices — handles high traffic & red soil.", color: "from-blue-50 to-cyan-50 border-blue-100" },
+              { name: "Persian / Patterned", img: "/images/carpet-persian.jpg", desc: "Gentle on designs & wool — revives colors, lifts stains.", color: "from-amber-50 to-orange-50 border-amber-100" },
+              { name: "Berber / Loop", img: "/images/carpet-berber.jpg", desc: "Pulls embedded grime from loops — stays springy & footprint-free.", color: "from-emerald-50 to-teal-50 border-emerald-100" },
+              { name: "Everyday Synthetic", img: "/images/carpet-synthetic.jpg", desc: "Deeper than DIY — extracts dust for that brand-new feel.", color: "from-sky-50 to-indigo-50 border-sky-100" },
             ].map((carpet) => (
               <motion.div
                 key={carpet.name}
                 variants={fadeUp}
-                className={`rounded-xl border bg-gradient-to-br ${carpet.color} p-5 sm:p-6 hover:shadow-md transition-shadow duration-200`}
+                className={`rounded-xl border bg-gradient-to-br ${carpet.color} overflow-hidden hover:shadow-lg transition-shadow duration-200`}
                 data-testid={`card-carpet-${carpet.name.replace(/[\s\/]+/g, '-').toLowerCase()}`}
               >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl flex-shrink-0 mt-0.5">{carpet.icon}</span>
-                  <div>
-                    <p className="font-semibold text-sm sm:text-base text-foreground mb-1">{carpet.name}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{carpet.desc}</p>
-                  </div>
+                <div className="h-36 sm:h-40 overflow-hidden">
+                  <img
+                    src={carpet.img}
+                    alt={carpet.name}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="p-4 sm:p-5">
+                  <p className="font-semibold text-sm sm:text-base text-foreground mb-1">{carpet.name}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{carpet.desc}</p>
                 </div>
               </motion.div>
             ))}
