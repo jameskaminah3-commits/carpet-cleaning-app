@@ -698,6 +698,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <BeforeAfterGallery />
+
       <section id="technology" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -782,8 +784,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      <BeforeAfterGallery />
 
       <section id="how-it-works" className="py-20 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
