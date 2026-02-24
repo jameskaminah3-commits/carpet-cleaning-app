@@ -700,6 +700,78 @@ export default function LandingPage() {
 
       <BeforeAfterGallery />
 
+      <section id="carpet-types" className="py-20 sm:py-24 bg-gradient-to-b from-white to-[#EBF3FF]/40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            variants={stagger}
+            className="text-center mb-12"
+          >
+            <motion.div variants={fadeUp}>
+              <Badge variant="outline" className="mb-4 text-xs px-4 py-1">All Carpet Types</Badge>
+            </motion.div>
+            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-sans font-bold" data-testid="text-carpet-types-title">
+              We Clean All Popular Types – <span className="text-primary">Yours Included!</span>
+            </motion.h2>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
+          >
+            {[
+              { name: "Shaggy / Fluffy", icon: "🧶", desc: "Lifts & fluffs long fibers, removes pet hair & dust — no matting.", color: "from-purple-50 to-pink-50 border-purple-100" },
+              { name: "Wall-to-Wall", icon: "🏠", desc: "Even deep clean for big rooms & offices — handles high traffic & red soil.", color: "from-blue-50 to-cyan-50 border-blue-100" },
+              { name: "Persian / Patterned", icon: "🎨", desc: "Gentle on designs & wool — revives colors, lifts stains.", color: "from-amber-50 to-orange-50 border-amber-100" },
+              { name: "Berber / Loop", icon: "🔄", desc: "Pulls embedded grime from loops — stays springy & footprint-free.", color: "from-emerald-50 to-teal-50 border-emerald-100" },
+              { name: "Everyday Synthetic", icon: "✨", desc: "Deeper than DIY — extracts dust for that brand-new feel.", color: "from-sky-50 to-indigo-50 border-sky-100" },
+            ].map((carpet) => (
+              <motion.div
+                key={carpet.name}
+                variants={fadeUp}
+                className={`rounded-xl border bg-gradient-to-br ${carpet.color} p-5 sm:p-6 hover:shadow-md transition-shadow duration-200`}
+                data-testid={`card-carpet-${carpet.name.replace(/[\s\/]+/g, '-').toLowerCase()}`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0 mt-0.5">{carpet.icon}</span>
+                  <div>
+                    <p className="font-semibold text-sm sm:text-base text-foreground mb-1">{carpet.name}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{carpet.desc}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center mt-10"
+          >
+            <p className="text-muted-foreground text-sm sm:text-base mb-4">
+              Unsure about your carpet type? WhatsApp us a photo — <span className="font-semibold text-foreground">free advice & quote in minutes!</span>
+            </p>
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white px-6 py-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg shadow-green-500/20 hover:scale-105 hover:shadow-xl transition-all duration-200"
+              data-testid="button-carpet-types-whatsapp"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Send a Photo on WhatsApp
+            </a>
+          </motion.div>
+        </div>
+      </section>
+
       <section id="technology" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
