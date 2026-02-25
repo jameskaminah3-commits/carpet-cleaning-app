@@ -90,10 +90,10 @@ function HeroBackground() {
 const technologies = [
   {
     id: "no-damp",
-    badge: "The No-Damp Promise",
-    title: "\"Ready-to-Use\" Advantage",
-    subtitle: "High-Velocity Vortex Extraction",
-    description: "Our industrial-grade High-Velocity Vortex Extraction system pulls out 95% of the water instantly. Your carpet comes back ready to lay down and walk on — no damp smell, no waiting days to dry.",
+    badge: "Dry & Ready Fast",
+    title: "Back Home Dry & Ready in Hours",
+    subtitle: "No Waiting!",
+    description: "We use powerful suction to pull out almost all the water right away (up to 95%). Your carpet dries super fast — no damp smell, no mould worries, and you can walk on it or let the kids play almost immediately.",
     stat: "95%",
     statLabel: "Water Extracted Instantly",
     icon: Wind,
@@ -103,9 +103,9 @@ const technologies = [
   {
     id: "dust",
     badge: "Heavy-Duty Power",
-    title: "Dust De-Clogging Technology",
-    subtitle: "Industrial Extraction Power",
-    description: "Nairobi's red soil doesn't stand a chance. Our Heavy-Duty Dust De-Clogging system uses industrial-grade suction and agitation to remove compacted dust, soil, and debris that household vacuums can't reach.",
+    title: "Super Strong Cleaning for Nairobi's Tough Dirt",
+    subtitle: "10× More Powerful",
+    description: "Our machines are 10× stronger than your home vacuum. They suck out deep-down red soil, dust, and grime that normal cleaners miss — your carpet looks and feels brand new.",
     stat: "10x",
     statLabel: "More Powerful Than Home Vacuums",
     icon: Zap,
@@ -114,10 +114,10 @@ const technologies = [
   },
   {
     id: "deep-fiber",
-    badge: "Deep Extraction",
-    title: "Deep-Fiber Agitation",
-    subtitle: "Foundation-Level Cleaning",
-    description: "Our Deep-Fiber Agitation technology reaches the 'foundation' of your carpet, extracting the hidden red soil and allergens that household machines miss. We clean from the base up, not just the surface.",
+    badge: "Deep Clean",
+    title: "Cleans Right Down to the Roots",
+    subtitle: "Every Fibre, Top to Bottom",
+    description: "We don't just clean the top — we get to the bottom of every fibre, pulling out hidden dirt, sand, and allergens so your carpet stays fresh longer.",
     stat: "100%",
     statLabel: "Fiber Depth Penetration",
     icon: Bug,
@@ -126,10 +126,10 @@ const technologies = [
   },
   {
     id: "zero-residue",
-    badge: "Family & Pet Friendly",
-    title: "\"Zero-Residue\" Safety",
-    subtitle: "Clean-Rinse Fluidics System",
-    description: "Our specialized tech uses Clean-Rinse Fluidics to ensure zero chemical residue. It leaves your carpet soft to the touch and safe for your kids and pets to crawl on immediately.",
+    badge: "Safe for Everyone",
+    title: "Completely Safe for Kids & Pets",
+    subtitle: "Nothing Left Behind",
+    description: "We rinse everything out properly so zero soap or chemicals stay in your carpet. It's soft, fresh, and 100% safe for babies crawling or pets rolling around — no irritation, no worries.",
     stat: "0%",
     statLabel: "Chemical Residue Left Behind",
     icon: Shield,
@@ -798,13 +798,13 @@ export default function LandingPage() {
             className="text-center mb-16"
           >
             <motion.div variants={fadeUp}>
-              <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Our Technology</Badge>
+              <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Why We're Different</Badge>
             </motion.div>
             <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-sans font-bold" data-testid="text-tech-title">
-              Why Our Cleaning Is <span className="text-primary">Different</span>
+              Why Your Carpet Comes Back <span className="text-primary">Better & Faster</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
-              We don't just clean the surface. Our proprietary extraction technology goes deep to restore your carpet from the foundation up.
+              No damp carpets, no chemical residue, no waiting around. Just a deep, thorough clean that's safe for your family and ready when you are.
             </motion.p>
           </motion.div>
 
