@@ -1,0 +1,142 @@
+I want to integrate MPESA payments into my web application using the Safaricom Daraja API.
+
+However, I do not yet have my production Paybill or live credentials, so please implement the integration using the Safaricom sandbox environment while making the system ready for production later.
+
+Design the implementation in a modular and production-ready way.
+
+1. CONFIGURATION
+
+Create a configuration module that reads all MPESA credentials from environment variables:
+
+MPESA_ENV=sandbox
+MPESA_CONSUMER_KEY=
+MPESA_CONSUMER_SECRET=
+MPESA_SHORTCODE=
+MPESA_PASSKEY=
+MPESA_INITIATOR_NAME=
+MPESA_INITIATOR_PASSWORD=
+MPESA_CALLBACK_URL=
+
+Automatically switch API base URLs depending on environment:
+
+sandbox → https://sandbox.safaricom.co.ke
+production → https://api.safaricom.co.ke
+
+
+2. MPESA SERVICE MODULE
+
+Create a reusable mpesaService module with the following functions:
+
+- generateAccessToken()
+- initiateSTKPush(phone, amount, accountReference, description)
+- registerC2BUrls()
+- simulateC2BPayment(phone, amount)
+- initiateB2C(phone, amount, remarks)
+- verifyTransaction(transactionId)
+
+Ensure access tokens are cached until expiry.
+
+3. PAYMENT FEATURES
+
+Implement the following MPESA capabilities:
+
+A) STK Push (Lipa Na MPESA Online)
+Endpoint:
+POST /api/mpesa/stkpush
+
+Flow:
+User enters phone number → backend sends STK push → payment confirmation handled via callback.
+
+
+B) C2B Paybill Integration
+Endpoints:
+
+POST /api/mpesa/register-c2b
+POST /api/mpesa/c2b/confirmation
+POST /api/mpesa/c2b/validation
+
+Allow the system to receive payments when a user manually pays to the Paybill.
+
+
+C) B2C Withdrawals
+Endpoint:
+POST /api/mpesa/b2c
+
+Allow the platform to send money from the system to a user's MPESA number.
+
+
+D) Transaction Status Query
+Endpoint:
+GET /api/mpesa/transaction-status/:transactionId
+
+
+4. CALLBACK HANDLERS
+
+Implement endpoints to handle MPESA callbacks:
+
+POST /api/mpesa/stk-callback
+POST /api/mpesa/c2b/confirmation
+POST /api/mpesa/c2b/validation
+POST /api/mpesa/b2c/result
+POST /api/mpesa/b2c/timeout
+
+Each callback should:
+
+- log raw MPESA response
+- update transaction status
+- store MPESA receipt numbers
+
+
+5. DATABASE STRUCTURE
+
+Create tables/collections:
+
+transactions
+- id
+- phone_number
+- amount
+- mpesa_receipt
+- transaction_type (STK, C2B, B2C)
+- transaction_id
+- reference
+- status (pending, success, failed)
+- raw_response
+- created_at
+
+payment_logs
+- id
+- endpoint
+- request_payload
+- response_payload
+- timestamp
+
+
+6. SECURITY
+
+Implement:
+
+- request validation
+- phone number formatting to 2547XXXXXXXX
+- rate limiting for payment endpoints
+- logging for debugging
+
+
+7. FRONTEND PAYMENT FLOW
+
+Add frontend logic:
+
+User clicks "Pay with MPESA"
+User enters phone number
+Call backend /api/mpesa/stkpush
+Show "Check your phone to complete payment"
+Poll payment status until confirmed.
+
+
+8. TESTING
+
+Use sandbox test credentials and allow payment simulation.
+
+Ensure switching to production only requires replacing environment variables without changing code.
+
+
+Do not remove existing features in my app. Only add the MPESA payment infrastructure cleanly.

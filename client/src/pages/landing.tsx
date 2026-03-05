@@ -1,12 +1,31 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  AnimatePresence,
+} from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Sparkles, Phone, Star, ChevronRight, ArrowRight, CheckCircle2,
-  Shield, Droplets, Wind, Bug, Home, Baby, Dog, Zap, Timer, Award,
-  MessageCircle
+  Sparkles,
+  Phone,
+  Star,
+  ChevronRight,
+  ArrowRight,
+  CheckCircle2,
+  Shield,
+  Droplets,
+  Wind,
+  Bug,
+  Home,
+  Baby,
+  Dog,
+  Zap,
+  Timer,
+  Award,
+  MessageCircle,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -38,31 +57,55 @@ const scaleIn = {
   visible: { opacity: 1, scale: 1 },
 };
 
-function SparkleStarSVG({ size = 16, className = "" }: { size?: number; className?: string }) {
+function SparkleStarSVG({
+  size = 16,
+  className = "",
+}: {
+  size?: number;
+  className?: string;
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" fill="currentColor" />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+    >
+      <path
+        d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
 
 function HeroBackground() {
-  const sparkles = useMemo(() =>
-    Array.from({ length: 25 }, (_, i) => ({
-      left: `${3 + (i * 3.9) % 94}%`,
-      top: `${3 + (i * 4.1) % 90}%`,
-      size: 3 + (i % 5) * 2,
-      duration: `${3 + (i % 5) * 1.5}s`,
-      delay: `${(i * 0.4) % 8}s`,
-    })), []);
+  const sparkles = useMemo(
+    () =>
+      Array.from({ length: 25 }, (_, i) => ({
+        left: `${3 + ((i * 3.9) % 94)}%`,
+        top: `${3 + ((i * 4.1) % 90)}%`,
+        size: 3 + (i % 5) * 2,
+        duration: `${3 + (i % 5) * 1.5}s`,
+        delay: `${(i * 0.4) % 8}s`,
+      })),
+    [],
+  );
 
   return (
     <div className="absolute inset-0">
       <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9] via-[#5A9DF5] to-[#C8DFFF]" />
 
       <div className="hero-glow-pulse absolute w-[500px] h-[500px] rounded-full bg-white/25 blur-[120px] top-[10%] left-[10%]" />
-      <div className="hero-glow-pulse absolute w-[400px] h-[400px] rounded-full bg-[#6ED3FF]/25 blur-[100px] top-[30%] right-[10%]" style={{ animationDelay: "3s" }} />
-      <div className="hero-glow-pulse absolute w-[350px] h-[350px] rounded-full bg-[#5EE6A8]/15 blur-[90px] bottom-[15%] left-[35%]" style={{ animationDelay: "5s" }} />
+      <div
+        className="hero-glow-pulse absolute w-[400px] h-[400px] rounded-full bg-[#6ED3FF]/25 blur-[100px] top-[30%] right-[10%]"
+        style={{ animationDelay: "3s" }}
+      />
+      <div
+        className="hero-glow-pulse absolute w-[350px] h-[350px] rounded-full bg-[#5EE6A8]/15 blur-[90px] bottom-[15%] left-[35%]"
+        style={{ animationDelay: "5s" }}
+      />
 
       {sparkles.map((s, i) => (
         <motion.div
@@ -93,7 +136,8 @@ const technologies = [
     badge: "Dry & Ready Fast",
     title: "Back Home Dry & Ready in Hours",
     subtitle: "No Waiting!",
-    description: "We use powerful suction to pull out almost all the water right away (up to 95%). Your carpet dries super fast — no damp smell, no mould worries, and you can walk on it or let the kids play almost immediately.",
+    description:
+      "We use powerful suction to pull out almost all the water right away (up to 95%). Your carpet dries super fast — no damp smell, no mould worries, and you can walk on it or let the kids play almost immediately.",
     stat: "95%",
     statLabel: "Water Extracted Instantly",
     icon: Wind,
@@ -103,9 +147,10 @@ const technologies = [
   {
     id: "dust",
     badge: "Heavy-Duty Power",
-    title: "Super Strong Cleaning for Nairobi's Tough Dirt",
+    title: "Super Strong Cleaning for even the Tougher Dirt",
     subtitle: "10× More Powerful",
-    description: "Our machines are 10× stronger than your home vacuum. They suck out deep-down red soil, dust, and grime that normal cleaners miss — your carpet looks and feels brand new.",
+    description:
+      "Our machines are 10× stronger than your home vacuum. They suck out deep-down red soil, dust, and grime that normal cleaners miss — your carpet looks and feels brand new.",
     stat: "10x",
     statLabel: "More Powerful Than Home Vacuums",
     icon: Zap,
@@ -117,7 +162,8 @@ const technologies = [
     badge: "Deep Clean",
     title: "Cleans Right Down to the Roots",
     subtitle: "Every Fibre, Top to Bottom",
-    description: "We don't just clean the top — we get to the bottom of every fibre, pulling out hidden dirt, sand, and allergens so your carpet stays fresh longer.",
+    description:
+      "We don't just clean the top — we get to the bottom of every fibre, pulling out hidden dirt, sand, and allergens so your carpet stays fresh longer.",
     stat: "100%",
     statLabel: "Fiber Depth Penetration",
     icon: Bug,
@@ -129,7 +175,8 @@ const technologies = [
     badge: "Safe for Everyone",
     title: "Completely Safe for Kids & Pets",
     subtitle: "Nothing Left Behind",
-    description: "We rinse everything out properly so zero soap or chemicals stay in your carpet. It's soft, fresh, and 100% safe for babies crawling or pets rolling around — no irritation, no worries.",
+    description:
+      "We rinse everything out properly so zero soap or chemicals stay in your carpet. It's soft, fresh, and 100% safe for babies crawling or pets rolling around — no irritation, no worries.",
     stat: "0%",
     statLabel: "Chemical Residue Left Behind",
     icon: Shield,
@@ -178,19 +225,42 @@ const testimonials = [
 ];
 
 const steps = [
-  { step: "1", title: "Get Free Estimate", desc: "Tell us your carpet type and dimensions — no login needed, no obligations" },
-  { step: "2", title: "We Pick Up", desc: "Our team collects your carpets from your doorstep at your preferred time" },
-  { step: "3", title: "Deep Extraction", desc: "Industrial-grade cleaning with our proprietary vortex extraction technology" },
-  { step: "4", title: "Ready to Use", desc: "Carpets returned dry, fresh, and ready to walk on — as fast as 2 hours" },
+  {
+    step: "1",
+    title: "Get Free Estimate",
+    desc: "Tell us your carpet type and dimensions — no login needed, no obligations",
+  },
+  {
+    step: "2",
+    title: "We Pick Up",
+    desc: "Our team collects your carpets from your doorstep at your preferred time",
+  },
+  {
+    step: "3",
+    title: "Deep Extraction",
+    desc: "Industrial-grade cleaning with our proprietary vortex extraction technology",
+  },
+  {
+    step: "4",
+    title: "Ready to Use",
+    desc: "Carpets returned dry, fresh, and ready to walk on — as fast as 2 hours",
+  },
 ];
 
 function BeforeAfterGallery() {
-  const { data: publicMedia = [] } = useQuery<Media[]>({ queryKey: ["/api/media/public"] });
-  const [lightbox, setLightbox] = useState<{ src: string; isVideo: boolean; title: string; subtitle: string } | null>(null);
+  const { data: publicMedia = [] } = useQuery<Media[]>({
+    queryKey: ["/api/media/public"],
+  });
+  const [lightbox, setLightbox] = useState<{
+    src: string;
+    isVideo: boolean;
+    title: string;
+    subtitle: string;
+  } | null>(null);
 
   const slides = useMemo(() => {
     if (publicMedia.length === 0) return [];
-    return publicMedia.map(item => ({
+    return publicMedia.map((item) => ({
       id: item.id,
       src: item.fileKey,
       isVideo: item.mimeType.startsWith("video"),
@@ -200,43 +270,56 @@ function BeforeAfterGallery() {
   }, [publicMedia]);
 
   const observerRef = { current: null as ResizeObserver | null };
-  const trackRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-    if (!node) return;
-    const measure = () => {
-      const firstChild = node.firstElementChild as HTMLElement | null;
-      if (!firstChild) return;
-      const computedGap = parseFloat(getComputedStyle(node).gap) || 0;
-      const childWidth = firstChild.offsetWidth + computedGap;
-      const setWidth = childWidth * Math.max(slides.length, 1);
-      node.style.setProperty("--single-set-width", `${setWidth}px`);
-    };
-    measure();
-    observerRef.current = new ResizeObserver(measure);
-    observerRef.current.observe(node);
-  }, [slides.length]);
+  const trackRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+      if (!node) return;
+      const measure = () => {
+        const firstChild = node.firstElementChild as HTMLElement | null;
+        if (!firstChild) return;
+        const computedGap = parseFloat(getComputedStyle(node).gap) || 0;
+        const childWidth = firstChild.offsetWidth + computedGap;
+        const setWidth = childWidth * Math.max(slides.length, 1);
+        node.style.setProperty("--single-set-width", `${setWidth}px`);
+      };
+      measure();
+      observerRef.current = new ResizeObserver(measure);
+      observerRef.current.observe(node);
+    },
+    [slides.length],
+  );
 
   if (slides.length === 0) return null;
 
-  const trackItems = slides.length >= 3 ? [...slides, ...slides, ...slides] : [...slides];
+  const trackItems =
+    slides.length >= 3 ? [...slides, ...slides, ...slides] : [...slides];
 
   return (
     <>
-      <section className="py-20 sm:py-24 bg-gradient-to-b from-[#EBF3FF] via-white to-white relative overflow-hidden" data-testid="section-before-after">
+      <section
+        className="py-20 sm:py-24 bg-gradient-to-b from-[#EBF3FF] via-white to-white relative overflow-hidden"
+        data-testid="section-before-after"
+      >
         <div className="absolute w-80 h-80 rounded-full bg-primary/8 blur-3xl -top-20 -right-20" />
         <div className="absolute w-64 h-64 rounded-full bg-[#5EE6A8]/8 blur-3xl bottom-0 left-10" />
 
         <div className="relative z-10">
           <div className="text-center mb-12 px-4 sm:px-6 lg:px-8">
-            <Badge variant="secondary" className="mb-4 text-xs">Real Results</Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground" data-testid="text-before-after-title">
+            <Badge variant="secondary" className="mb-4 text-xs">
+              Real Results
+            </Badge>
+            <h2
+              className="text-3xl sm:text-4xl font-bold text-foreground"
+              data-testid="text-before-after-title"
+            >
               Before & <span className="text-primary">After</span>
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              See the sparkling difference we make. Every carpet tells a transformation story.
+              See the sparkling difference we make. Every carpet tells a
+              transformation story.
             </p>
           </div>
 
@@ -244,7 +327,11 @@ function BeforeAfterGallery() {
             <div
               ref={trackRef}
               className={`flex gap-6 ${slides.length >= 3 ? "gallery-scroll-track" : "justify-center"}`}
-              style={slides.length >= 3 ? { ["--duration" as string]: `${slides.length * 5}s` } : undefined}
+              style={
+                slides.length >= 3
+                  ? { ["--duration" as string]: `${slides.length * 5}s` }
+                  : undefined
+              }
             >
               {trackItems.map((slide, i) => (
                 <div
@@ -293,8 +380,20 @@ function BeforeAfterGallery() {
                     </div>
                   )}
                   <div className="mt-3 text-center">
-                    <p className="font-semibold text-sm text-foreground" data-testid={`text-gallery-title-${i}`}>{slide.title}</p>
-                    {slide.subtitle && <p className="text-xs text-muted-foreground" data-testid={`text-gallery-subtitle-${i}`}>{slide.subtitle}</p>}
+                    <p
+                      className="font-semibold text-sm text-foreground"
+                      data-testid={`text-gallery-title-${i}`}
+                    >
+                      {slide.title}
+                    </p>
+                    {slide.subtitle && (
+                      <p
+                        className="text-xs text-muted-foreground"
+                        data-testid={`text-gallery-subtitle-${i}`}
+                      >
+                        {slide.subtitle}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -302,7 +401,9 @@ function BeforeAfterGallery() {
           </div>
 
           <div className="text-center mt-10 px-4">
-            <p className="text-muted-foreground text-xs">Trusted by 5,000+ Nairobi homes and offices</p>
+            <p className="text-muted-foreground text-xs">
+              Trusted by 5,000+ Nairobi homes and offices
+            </p>
           </div>
         </div>
       </section>
@@ -323,15 +424,25 @@ function BeforeAfterGallery() {
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center"
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={() => setLightbox(null)}
                 className="absolute -top-2 -right-2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
                 data-testid="button-close-lightbox"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
 
@@ -356,8 +467,20 @@ function BeforeAfterGallery() {
               )}
 
               <div className="mt-4 text-center">
-                <h3 className="text-white font-semibold text-lg" data-testid="lightbox-title">{lightbox.title}</h3>
-                {lightbox.subtitle && <p className="text-white/60 text-sm mt-1" data-testid="lightbox-subtitle">{lightbox.subtitle}</p>}
+                <h3
+                  className="text-white font-semibold text-lg"
+                  data-testid="lightbox-title"
+                >
+                  {lightbox.title}
+                </h3>
+                {lightbox.subtitle && (
+                  <p
+                    className="text-white/60 text-sm mt-1"
+                    data-testid="lightbox-subtitle"
+                  >
+                    {lightbox.subtitle}
+                  </p>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -370,10 +493,12 @@ function BeforeAfterGallery() {
 function TestimonialsCarousel() {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const { data: publicReviews = [] } = useQuery<(Review & { customer?: User })[]>({ queryKey: ["/api/reviews/public"] });
+  const { data: publicReviews = [] } = useQuery<
+    (Review & { customer?: User })[]
+  >({ queryKey: ["/api/reviews/public"] });
 
   const allTestimonials = useMemo(() => {
-    const real = publicReviews.map(r => ({
+    const real = publicReviews.map((r) => ({
       name: r.customer?.name || "Customer",
       location: "Nairobi",
       text: r.comment || "Great service!",
@@ -387,7 +512,9 @@ function TestimonialsCarousel() {
   }, [allTestimonials.length]);
 
   const prev = useCallback(() => {
-    setCurrent((prev) => (prev - 1 + allTestimonials.length) % allTestimonials.length);
+    setCurrent(
+      (prev) => (prev - 1 + allTestimonials.length) % allTestimonials.length,
+    );
   }, [allTestimonials.length]);
 
   useEffect(() => {
@@ -399,7 +526,9 @@ function TestimonialsCarousel() {
   const getVisibleIndices = () => {
     const indices = [];
     for (let i = -1; i <= 1; i++) {
-      indices.push((current + i + allTestimonials.length) % allTestimonials.length);
+      indices.push(
+        (current + i + allTestimonials.length) % allTestimonials.length,
+      );
     }
     return indices;
   };
@@ -407,11 +536,21 @@ function TestimonialsCarousel() {
   const visible = getVisibleIndices();
 
   return (
-    <section id="testimonials" className="py-20 sm:py-24 bg-card overflow-hidden">
+    <section
+      id="testimonials"
+      className="py-20 sm:py-24 bg-card overflow-hidden"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
-          <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Client Stories</Badge>
-          <h2 className="text-3xl sm:text-4xl font-sans font-bold" data-testid="text-reviews-title">What Our Clients Say</h2>
+          <Badge variant="outline" className="mb-4 text-xs px-4 py-1">
+            Client Stories
+          </Badge>
+          <h2
+            className="text-3xl sm:text-4xl font-sans font-bold"
+            data-testid="text-reviews-title"
+          >
+            What Our Clients Say
+          </h2>
         </div>
 
         <div
@@ -434,13 +573,23 @@ function TestimonialsCarousel() {
                     <Card className="p-6 h-full hover:shadow-lg transition-shadow">
                       <div className="flex gap-1 mb-4">
                         {Array.from({ length: t.rating }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <Star
+                            key={i}
+                            className="w-4 h-4 fill-yellow-400 text-yellow-400"
+                          />
                         ))}
                       </div>
-                      <p className="text-sm leading-relaxed mb-4 text-muted-foreground italic" data-testid={`text-testimonial-${idx}`}>"{t.text}"</p>
+                      <p
+                        className="text-sm leading-relaxed mb-4 text-muted-foreground italic"
+                        data-testid={`text-testimonial-${idx}`}
+                      >
+                        "{t.text}"
+                      </p>
                       <div>
                         <p className="font-semibold text-sm">{t.name}</p>
-                        <p className="text-xs text-muted-foreground">{t.location}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t.location}
+                        </p>
                       </div>
                     </Card>
                   </motion.div>
@@ -460,14 +609,25 @@ function TestimonialsCarousel() {
               >
                 <Card className="p-6">
                   <div className="flex gap-1 mb-4">
-                    {Array.from({ length: allTestimonials[current]?.rating || 5 }).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    {Array.from({
+                      length: allTestimonials[current]?.rating || 5,
+                    }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className="w-4 h-4 fill-yellow-400 text-yellow-400"
+                      />
                     ))}
                   </div>
-                  <p className="text-sm leading-relaxed mb-4 text-muted-foreground italic">"{allTestimonials[current]?.text}"</p>
+                  <p className="text-sm leading-relaxed mb-4 text-muted-foreground italic">
+                    "{allTestimonials[current]?.text}"
+                  </p>
                   <div>
-                    <p className="font-semibold text-sm">{allTestimonials[current]?.name}</p>
-                    <p className="text-xs text-muted-foreground">{allTestimonials[current]?.location}</p>
+                    <p className="font-semibold text-sm">
+                      {allTestimonials[current]?.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {allTestimonials[current]?.location}
+                    </p>
                   </div>
                 </Card>
               </motion.div>
@@ -489,7 +649,9 @@ function TestimonialsCarousel() {
                   key={i}
                   onClick={() => setCurrent(i)}
                   className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    i === current ? "bg-primary w-6" : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    i === current
+                      ? "bg-primary w-6"
+                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
                   }`}
                   data-testid={`button-testimonial-dot-${i}`}
                   aria-label={`Go to review ${i + 1}`}
@@ -519,18 +681,49 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 h-16">
           <div className="flex items-center gap-2">
-            <img src="/logo-original.jpg" alt="Sparkle n' Glee" className="h-9 w-auto rounded-lg" />
-            <span className="text-lg sm:text-xl font-bold text-primary" data-testid="text-brand-name">
+            <img
+              src="/logo-original.jpg"
+              alt="Sparkle n' Glee"
+              className="h-9 w-auto rounded-lg"
+            />
+            <span
+              className="text-lg sm:text-xl font-bold text-primary"
+              data-testid="text-brand-name"
+            >
               Sparkle n' Glee
             </span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#technology" className="hover:text-foreground transition-colors" data-testid="link-technology">Technology</a>
-            <a href="#how-it-works" className="hover:text-foreground transition-colors" data-testid="link-how-it-works">How It Works</a>
-            <a href="#testimonials" className="hover:text-foreground transition-colors" data-testid="link-testimonials">Reviews</a>
+            <a
+              href="#technology"
+              className="hover:text-foreground transition-colors"
+              data-testid="link-technology"
+            >
+              Technology
+            </a>
+            <a
+              href="#how-it-works"
+              className="hover:text-foreground transition-colors"
+              data-testid="link-how-it-works"
+            >
+              How It Works
+            </a>
+            <a
+              href="#testimonials"
+              className="hover:text-foreground transition-colors"
+              data-testid="link-testimonials"
+            >
+              Reviews
+            </a>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate("/login")} data-testid="button-login">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => navigate("/login")}
+              data-testid="button-login"
+            >
               Sign In
             </Button>
             <button
@@ -551,34 +744,49 @@ export default function LandingPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.7 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5, duration: 0.8, type: "spring", damping: 18 }}
+          transition={{
+            delay: 0.5,
+            duration: 0.8,
+            type: "spring",
+            damping: 18,
+          }}
           className="absolute inset-0 z-[5] pointer-events-none overflow-hidden"
         >
           <motion.div
             className="absolute top-[12%] right-[8%] sm:top-[10%] sm:right-[12%] text-white/30"
             animate={{ opacity: [0, 0.8, 0], scale: [0.4, 1.1, 0.4] }}
             transition={{ duration: 3, repeat: Infinity, delay: 0.3 }}
-          ><SparkleStarSVG size={14} /></motion.div>
+          >
+            <SparkleStarSVG size={14} />
+          </motion.div>
           <motion.div
             className="absolute top-[30%] left-[5%] sm:top-[25%] sm:left-[8%] text-[#5EE6A8]/35"
             animate={{ opacity: [0, 0.7, 0], scale: [0.5, 1, 0.5] }}
             transition={{ duration: 3.5, repeat: Infinity, delay: 1.0 }}
-          ><SparkleStarSVG size={10} /></motion.div>
+          >
+            <SparkleStarSVG size={10} />
+          </motion.div>
           <motion.div
             className="absolute bottom-[20%] right-[15%] sm:bottom-[25%] sm:right-[20%] text-[#6ED3FF]/30"
             animate={{ opacity: [0, 0.9, 0], scale: [0.3, 1.2, 0.3] }}
             transition={{ duration: 2.8, repeat: Infinity, delay: 0.7 }}
-          ><SparkleStarSVG size={18} /></motion.div>
+          >
+            <SparkleStarSVG size={18} />
+          </motion.div>
           <motion.div
             className="absolute bottom-[35%] left-[12%] sm:bottom-[30%] sm:left-[15%] text-white/25"
             animate={{ opacity: [0, 0.6, 0], scale: [0.5, 1, 0.5] }}
             transition={{ duration: 4, repeat: Infinity, delay: 1.8 }}
-          ><SparkleStarSVG size={8} /></motion.div>
+          >
+            <SparkleStarSVG size={8} />
+          </motion.div>
           <motion.div
             className="absolute top-[55%] right-[5%] sm:top-[50%] sm:right-[6%] text-[#C8A2F8]/25"
             animate={{ opacity: [0, 0.7, 0], scale: [0.4, 1, 0.4] }}
             transition={{ duration: 3.2, repeat: Infinity, delay: 2.2 }}
-          ><SparkleStarSVG size={12} /></motion.div>
+          >
+            <SparkleStarSVG size={12} />
+          </motion.div>
 
           <motion.img
             src={logoClear}
@@ -586,11 +794,33 @@ export default function LandingPage() {
             className="absolute top-1/2 left-1/2 w-[100px] sm:w-[140px] lg:w-[200px] h-auto drop-shadow-2xl"
             style={{ marginTop: "-50px", marginLeft: "-50px" }}
             animate={{
-              x:       ["30vw",  "-25vw", "-25vw", "20vw",  "20vw",  "-35vw", "-35vw", "10vw",  "10vw",  "30vw"],
-              y:       ["-30vh", "15vh",  "15vh",  "-35vh", "-35vh", "10vh",  "10vh",  "-20vh", "-20vh", "-30vh"],
-              opacity: [0.85,    0.1,     0.9,     0.08,    0.85,    0.1,     0.9,     0.08,    0.85,    0.85],
-              scale:   [1,       0.4,     1,       0.35,    1,       0.4,     1,       0.35,    1,       1],
-              rotate:  [0,       15,      -5,      -12,     3,       18,      -8,      -15,     5,       0],
+              x: [
+                "30vw",
+                "-25vw",
+                "-25vw",
+                "20vw",
+                "20vw",
+                "-35vw",
+                "-35vw",
+                "10vw",
+                "10vw",
+                "30vw",
+              ],
+              y: [
+                "-30vh",
+                "15vh",
+                "15vh",
+                "-35vh",
+                "-35vh",
+                "10vh",
+                "10vh",
+                "-20vh",
+                "-20vh",
+                "-30vh",
+              ],
+              opacity: [0.85, 0.1, 0.9, 0.08, 0.85, 0.1, 0.9, 0.08, 0.85, 0.85],
+              scale: [1, 0.4, 1, 0.35, 1, 0.4, 1, 0.35, 1, 1],
+              rotate: [0, 15, -5, -12, 3, 18, -8, -15, 5, 0],
             }}
             transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
             data-testid="img-hero-mascot"
@@ -605,7 +835,11 @@ export default function LandingPage() {
             className="max-w-2xl"
           >
             <motion.div variants={fadeUp}>
-              <Badge variant="secondary" className="mb-5 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 rounded-full" data-testid="badge-hero-tag">
+              <Badge
+                variant="secondary"
+                className="mb-5 text-xs font-medium bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-1.5 rounded-full"
+                data-testid="badge-hero-tag"
+              >
                 <Sparkles className="w-3 h-3 mr-1.5" />
                 Sparkling, Spotless, Fast
               </Badge>
@@ -617,8 +851,7 @@ export default function LandingPage() {
               style={{ fontSize: "clamp(2rem, 5vw, 4rem)" }}
               data-testid="text-hero-title"
             >
-              Carpets So Clean,{" "}
-              <br className="hidden sm:block" />
+              Carpets So Clean, <br className="hidden sm:block" />
               They Practically{" "}
               <span className="relative inline-block">
                 <span className="text-[#5EE6A8]">Sparkle</span>
@@ -636,7 +869,9 @@ export default function LandingPage() {
               className="mt-5 text-base sm:text-lg text-white/85 max-w-lg leading-relaxed"
               data-testid="text-hero-subtitle"
             >
-              We deep-clean your carpets, remove stubborn dirt and allergens — and return them fresh, dry and ready to enjoy in as little as <strong className="text-white font-semibold">2 hours</strong>.
+              We deep-clean your carpets, remove stubborn dirt and allergens —
+              and return them fresh, dry and ready to enjoy in as little as{" "}
+              <strong className="text-white font-semibold">2 hours</strong>.
             </motion.p>
 
             <motion.div variants={fadeUp} className="mt-7 flex flex-wrap gap-3">
@@ -659,19 +894,40 @@ export default function LandingPage() {
               </a>
             </motion.div>
 
-            <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-2 sm:gap-3">
+            <motion.div
+              variants={fadeUp}
+              className="mt-6 flex flex-wrap gap-2 sm:gap-3"
+            >
               {[
-                { icon: CheckCircle2, label: "Returns Dry & Ready", color: "text-[#5EE6A8]" },
-                { icon: Timer, label: "As Fast as 2 Hours", color: "text-[#6ED3FF]" },
-                { icon: Shield, label: "Zero Chemical Residue", color: "text-[#C8A2F8]" },
-                { icon: Baby, label: "Safe for Kids & Pets", color: "text-[#FFB3C6]" },
+                {
+                  icon: CheckCircle2,
+                  label: "Returns Dry & Ready",
+                  color: "text-[#5EE6A8]",
+                },
+                {
+                  icon: Timer,
+                  label: "As Fast as 2 Hours",
+                  color: "text-[#6ED3FF]",
+                },
+                {
+                  icon: Shield,
+                  label: "Zero Chemical Residue",
+                  color: "text-[#C8A2F8]",
+                },
+                {
+                  icon: Baby,
+                  label: "Safe for Kids & Pets",
+                  color: "text-[#FFB3C6]",
+                },
               ].map((badge) => (
                 <div
                   key={badge.label}
                   className="flex items-center gap-1.5 text-xs sm:text-sm text-white/90 bg-white/15 backdrop-blur-[8px] rounded-[20px] px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm"
-                  data-testid={`badge-${badge.label.replace(/\s+/g, '-').toLowerCase()}`}
+                  data-testid={`badge-${badge.label.replace(/\s+/g, "-").toLowerCase()}`}
                 >
-                  <badge.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${badge.color}`} />
+                  <badge.icon
+                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${badge.color}`}
+                  />
                   <span>{badge.label}</span>
                 </div>
               ))}
@@ -690,16 +946,41 @@ export default function LandingPage() {
             className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center"
           >
             {[
-              { value: "2hrs", label: "Fastest Turnaround", color: "text-primary" },
-              { value: "95%", label: "Water Extracted Instantly", color: "text-cyan-500" },
-              { value: "0%", label: "Chemical Residue", color: "text-purple-500" },
-              { value: "5,000+", label: "Carpets Cleaned", color: "text-emerald-500" },
+              {
+                value: "2hrs",
+                label: "Fastest Turnaround",
+                color: "text-primary",
+              },
+              {
+                value: "95%",
+                label: "Water Extracted Instantly",
+                color: "text-cyan-500",
+              },
+              {
+                value: "0%",
+                label: "Chemical Residue",
+                color: "text-purple-500",
+              },
+              {
+                value: "5,000+",
+                label: "Carpets Cleaned",
+                color: "text-emerald-500",
+              },
             ].map((item) => (
-              <motion.div key={item.label} variants={scaleIn} className="space-y-1">
-                <p className={`text-3xl sm:text-4xl font-sans font-bold ${item.color}`} data-testid={`text-stat-${item.label.replace(/\s+/g, '-').toLowerCase()}`}>
+              <motion.div
+                key={item.label}
+                variants={scaleIn}
+                className="space-y-1"
+              >
+                <p
+                  className={`text-3xl sm:text-4xl font-sans font-bold ${item.color}`}
+                  data-testid={`text-stat-${item.label.replace(/\s+/g, "-").toLowerCase()}`}
+                >
                   {item.value}
                 </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">{item.label}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {item.label}
+                </p>
               </motion.div>
             ))}
           </motion.div>
@@ -708,7 +989,10 @@ export default function LandingPage() {
 
       <BeforeAfterGallery />
 
-      <section id="carpet-types" className="py-20 sm:py-24 bg-gradient-to-b from-white to-[#EBF3FF]/40">
+      <section
+        id="carpet-types"
+        className="py-20 sm:py-24 bg-gradient-to-b from-white to-[#EBF3FF]/40"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
@@ -718,10 +1002,17 @@ export default function LandingPage() {
             className="text-center mb-12"
           >
             <motion.div variants={fadeUp}>
-              <Badge variant="outline" className="mb-4 text-xs px-4 py-1">All Carpet Types</Badge>
+              <Badge variant="outline" className="mb-4 text-xs px-4 py-1">
+                All Carpet Types
+              </Badge>
             </motion.div>
-            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl font-sans font-bold" data-testid="text-carpet-types-title">
-              We Clean All Popular Types – <span className="text-primary">Yours Included!</span>
+            <motion.h2
+              variants={fadeUp}
+              className="text-3xl sm:text-4xl font-sans font-bold"
+              data-testid="text-carpet-types-title"
+            >
+              We Clean All Popular Types –{" "}
+              <span className="text-primary">Yours Included!</span>
             </motion.h2>
           </motion.div>
 
@@ -733,20 +1024,60 @@ export default function LandingPage() {
             className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5"
           >
             {[
-              { name: "Shag Carpet", img: imgShag, desc: "Deep-pile luxury — we restore volume & remove trapped dust.", color: "from-stone-50 to-neutral-50 border-stone-100" },
-              { name: "Fluffy Carpet", img: imgFluffy, desc: "Lifts & fluffs long fibers, removes pet hair — no matting.", color: "from-purple-50 to-pink-50 border-purple-100" },
-              { name: "Wall-to-Wall", img: imgWallToWall, desc: "Even deep clean for big rooms & offices — handles high traffic.", color: "from-blue-50 to-cyan-50 border-blue-100" },
-              { name: "Persian / Oriental", img: imgPersian, desc: "Gentle on designs & wool — revives colors, lifts stains.", color: "from-amber-50 to-orange-50 border-amber-100" },
-              { name: "Berber Carpet", img: imgBerber, desc: "Pulls embedded grime from loops — stays springy & clean.", color: "from-emerald-50 to-teal-50 border-emerald-100" },
-              { name: "Frieze Carpet", img: imgFrieze, desc: "Twisted fibers refreshed — extracts deep dirt, restores bounce.", color: "from-sky-50 to-indigo-50 border-sky-100" },
-              { name: "Sisal / Jute", img: imgSisalJute, desc: "Natural fiber care — gentle cleaning that preserves texture.", color: "from-yellow-50 to-amber-50 border-yellow-100" },
-              { name: "Silk Carpet", img: imgSilk, desc: "Delicate luxury treatment — preserves sheen & intricate patterns.", color: "from-teal-50 to-cyan-50 border-teal-100" },
+              {
+                name: "Shag Carpet",
+                img: imgShag,
+                desc: "Deep-pile luxury — we restore volume & remove trapped dust.",
+                color: "from-stone-50 to-neutral-50 border-stone-100",
+              },
+              {
+                name: "Fluffy Carpet",
+                img: imgFluffy,
+                desc: "Lifts & fluffs long fibers, removes pet hair — no matting.",
+                color: "from-purple-50 to-pink-50 border-purple-100",
+              },
+              {
+                name: "Wall-to-Wall",
+                img: imgWallToWall,
+                desc: "Even deep clean for big rooms & offices — handles high traffic.",
+                color: "from-blue-50 to-cyan-50 border-blue-100",
+              },
+              {
+                name: "Persian / Oriental",
+                img: imgPersian,
+                desc: "Gentle on designs & wool — revives colors, lifts stains.",
+                color: "from-amber-50 to-orange-50 border-amber-100",
+              },
+              {
+                name: "Berber Carpet",
+                img: imgBerber,
+                desc: "Pulls embedded grime from loops — stays springy & clean.",
+                color: "from-emerald-50 to-teal-50 border-emerald-100",
+              },
+              {
+                name: "Frieze Carpet",
+                img: imgFrieze,
+                desc: "Twisted fibers refreshed — extracts deep dirt, restores bounce.",
+                color: "from-sky-50 to-indigo-50 border-sky-100",
+              },
+              {
+                name: "Sisal / Jute",
+                img: imgSisalJute,
+                desc: "Natural fiber care — gentle cleaning that preserves texture.",
+                color: "from-yellow-50 to-amber-50 border-yellow-100",
+              },
+              {
+                name: "Silk Carpet",
+                img: imgSilk,
+                desc: "Delicate luxury treatment — preserves sheen & intricate patterns.",
+                color: "from-teal-50 to-cyan-50 border-teal-100",
+              },
             ].map((carpet) => (
               <motion.div
                 key={carpet.name}
                 variants={fadeUp}
                 className={`rounded-xl border bg-gradient-to-br ${carpet.color} overflow-hidden hover:shadow-lg transition-shadow duration-200`}
-                data-testid={`card-carpet-${carpet.name.replace(/[\s\/]+/g, '-').toLowerCase()}`}
+                data-testid={`card-carpet-${carpet.name.replace(/[\s\/]+/g, "-").toLowerCase()}`}
               >
                 <div className="h-36 sm:h-40 overflow-hidden">
                   <img
@@ -757,8 +1088,12 @@ export default function LandingPage() {
                   />
                 </div>
                 <div className="p-4 sm:p-5">
-                  <p className="font-semibold text-sm sm:text-base text-foreground mb-1">{carpet.name}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{carpet.desc}</p>
+                  <p className="font-semibold text-sm sm:text-base text-foreground mb-1">
+                    {carpet.name}
+                  </p>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                    {carpet.desc}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -772,7 +1107,10 @@ export default function LandingPage() {
             className="text-center mt-10"
           >
             <p className="text-muted-foreground text-sm sm:text-base mb-4">
-              Unsure about your carpet type? WhatsApp us a photo — <span className="font-semibold text-foreground">free advice & quote in minutes!</span>
+              Unsure about your carpet type? WhatsApp us a photo —{" "}
+              <span className="font-semibold text-foreground">
+                free advice & quote in minutes!
+              </span>
             </p>
             <a
               href={WHATSAPP_LINK}
@@ -798,13 +1136,25 @@ export default function LandingPage() {
             className="text-center mb-16"
           >
             <motion.div variants={fadeUp}>
-              <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Why We're Different</Badge>
+              <Badge variant="outline" className="mb-4 text-xs px-4 py-1">
+                Why We're Different
+              </Badge>
             </motion.div>
-            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-sans font-bold" data-testid="text-tech-title">
-              Why Your Carpet Comes Back <span className="text-primary">Better & Faster</span>
+            <motion.h2
+              variants={fadeUp}
+              className="text-3xl sm:text-4xl lg:text-5xl font-sans font-bold"
+              data-testid="text-tech-title"
+            >
+              Why Your Carpet Comes Back{" "}
+              <span className="text-primary">Better & Faster</span>
             </motion.h2>
-            <motion.p variants={fadeUp} className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
-              No damp carpets, no chemical residue, no waiting around. Just a deep, thorough clean that's safe for your family and ready when you are.
+            <motion.p
+              variants={fadeUp}
+              className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg"
+            >
+              No damp carpets, no chemical residue, no waiting around. Just a
+              deep, thorough clean that's safe for your family and ready when
+              you are.
             </motion.p>
           </motion.div>
 
@@ -818,12 +1168,22 @@ export default function LandingPage() {
                 variants={stagger}
                 className={`grid lg:grid-cols-2 gap-8 lg:gap-16 items-center ${i % 2 === 1 ? "lg:direction-rtl" : ""}`}
               >
-                <motion.div variants={fadeUp} className={i % 2 === 1 ? "lg:order-2" : ""}>
-                  <Badge variant="secondary" className="mb-4 text-xs">{tech.badge}</Badge>
-                  <h3 className="text-2xl sm:text-3xl font-sans font-bold mb-2" data-testid={`text-tech-${tech.id}`}>
+                <motion.div
+                  variants={fadeUp}
+                  className={i % 2 === 1 ? "lg:order-2" : ""}
+                >
+                  <Badge variant="secondary" className="mb-4 text-xs">
+                    {tech.badge}
+                  </Badge>
+                  <h3
+                    className="text-2xl sm:text-3xl font-sans font-bold mb-2"
+                    data-testid={`text-tech-${tech.id}`}
+                  >
                     {tech.title}
                   </h3>
-                  <p className="text-sm font-medium text-primary mb-4">{tech.subtitle}</p>
+                  <p className="text-sm font-medium text-primary mb-4">
+                    {tech.subtitle}
+                  </p>
                   <p className="text-muted-foreground leading-relaxed text-base mb-6">
                     {tech.description}
                   </p>
@@ -849,8 +1209,13 @@ export default function LandingPage() {
                   </button>
                 </motion.div>
 
-                <motion.div variants={scaleIn} className={`relative ${i % 2 === 1 ? "lg:order-1" : ""}`}>
-                  <div className={`relative rounded-2xl overflow-hidden ${tech.bgGlow} p-8 sm:p-12`}>
+                <motion.div
+                  variants={scaleIn}
+                  className={`relative ${i % 2 === 1 ? "lg:order-1" : ""}`}
+                >
+                  <div
+                    className={`relative rounded-2xl overflow-hidden ${tech.bgGlow} p-8 sm:p-12`}
+                  >
                     <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5" />
                     <div className="relative text-center">
                       <motion.div
@@ -860,10 +1225,14 @@ export default function LandingPage() {
                       >
                         <tech.icon className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                       </motion.div>
-                      <p className={`text-5xl sm:text-6xl font-sans font-bold bg-gradient-to-br ${tech.gradient} bg-clip-text text-transparent`}>
+                      <p
+                        className={`text-5xl sm:text-6xl font-sans font-bold bg-gradient-to-br ${tech.gradient} bg-clip-text text-transparent`}
+                      >
                         {tech.stat}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-2 font-medium">{tech.statLabel}</p>
+                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        {tech.statLabel}
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -876,10 +1245,18 @@ export default function LandingPage() {
       <section id="how-it-works" className="py-20 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs px-4 py-1">Simple Process</Badge>
-            <h2 className="text-3xl sm:text-4xl font-sans font-bold" data-testid="text-how-title">How It Works</h2>
+            <Badge variant="outline" className="mb-4 text-xs px-4 py-1">
+              Simple Process
+            </Badge>
+            <h2
+              className="text-3xl sm:text-4xl font-sans font-bold"
+              data-testid="text-how-title"
+            >
+              How It Works
+            </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              From estimate to delivery, we make the entire process seamless. No login required to get started.
+              From estimate to delivery, we make the entire process seamless. No
+              login required to get started.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -903,7 +1280,9 @@ export default function LandingPage() {
                   {s.step}
                 </motion.div>
                 <h3 className="font-semibold text-lg mb-2">{s.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {s.desc}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -923,14 +1302,25 @@ export default function LandingPage() {
             viewport={{ once: true }}
             variants={stagger}
           >
-            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl lg:text-5xl font-sans font-bold mb-4" data-testid="text-cta-title">
+            <motion.h2
+              variants={fadeUp}
+              className="text-3xl sm:text-4xl lg:text-5xl font-sans font-bold mb-4"
+              data-testid="text-cta-title"
+            >
               Ready for Carpets That Feel{" "}
               <span className="text-primary">Brand New</span>?
             </motion.h2>
-            <motion.p variants={fadeUp} className="text-muted-foreground mb-8 max-w-xl mx-auto text-lg">
-              Get your free estimate in under 2 minutes. No login required — just tell us about your carpets and we'll handle the rest.
+            <motion.p
+              variants={fadeUp}
+              className="text-muted-foreground mb-8 max-w-xl mx-auto text-lg"
+            >
+              Get your free estimate in under 2 minutes. No login required —
+              just tell us about your carpets and we'll handle the rest.
             </motion.p>
-            <motion.div variants={fadeUp} className="flex flex-wrap gap-3 justify-center">
+            <motion.div
+              variants={fadeUp}
+              className="flex flex-wrap gap-3 justify-center"
+            >
               <button
                 onClick={() => navigate("/book")}
                 className="inline-flex items-center gap-2 text-base font-semibold text-white px-8 py-3.5 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-lg shadow-blue-500/25 hover:scale-105 hover:shadow-xl transition-all duration-200"
@@ -949,9 +1339,16 @@ export default function LandingPage() {
                 </button>
               </a>
             </motion.div>
-            <motion.p variants={fadeUp} className="mt-6 text-sm text-muted-foreground">
+            <motion.p
+              variants={fadeUp}
+              className="mt-6 text-sm text-muted-foreground"
+            >
               Or call us directly at{" "}
-              <a href={`tel:${PHONE_NUMBER}`} className="text-primary font-medium hover:underline" data-testid="link-phone-cta">
+              <a
+                href={`tel:${PHONE_NUMBER}`}
+                className="text-primary font-medium hover:underline"
+                data-testid="link-phone-cta"
+              >
                 {PHONE_NUMBER}
               </a>
             </motion.p>
@@ -964,30 +1361,62 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <img src={logoClear} alt="Sparkle n' Glee" className="h-12 w-auto drop-shadow-sm" />
+                <img
+                  src={logoClear}
+                  alt="Sparkle n' Glee"
+                  className="h-12 w-auto drop-shadow-sm"
+                />
                 <span className="font-bold text-primary">Sparkle n' Glee</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Nairobi's favourite carpet cleaning service. Sparkling, spotless, fast.
+                Nairobi's favourite carpet cleaning service. Sparkling,
+                spotless, fast.
               </p>
             </div>
             <div>
-              <p className="font-semibold text-sm mb-3 text-foreground">Contact</p>
+              <p className="font-semibold text-sm mb-3 text-foreground">
+                Contact
+              </p>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <a href={`tel:${PHONE_NUMBER}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                <a
+                  href={`tel:${PHONE_NUMBER}`}
+                  className="flex items-center gap-2 hover:text-primary transition-colors"
+                >
                   <Phone className="w-4 h-4" /> {PHONE_NUMBER}
                 </a>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-green-500 transition-colors">
+                <a
+                  href={WHATSAPP_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 hover:text-green-500 transition-colors"
+                >
                   <MessageCircle className="w-4 h-4" /> WhatsApp Chat
                 </a>
               </div>
             </div>
             <div>
-              <p className="font-semibold text-sm mb-3 text-foreground">Quick Links</p>
+              <p className="font-semibold text-sm mb-3 text-foreground">
+                Quick Links
+              </p>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <a href="#technology" className="block hover:text-primary transition-colors">Our Technology</a>
-                <a href="#how-it-works" className="block hover:text-primary transition-colors">How It Works</a>
-                <button onClick={() => navigate("/book")} className="block hover:text-primary transition-colors">Get Free Estimate</button>
+                <a
+                  href="#technology"
+                  className="block hover:text-primary transition-colors"
+                >
+                  Our Technology
+                </a>
+                <a
+                  href="#how-it-works"
+                  className="block hover:text-primary transition-colors"
+                >
+                  How It Works
+                </a>
+                <button
+                  onClick={() => navigate("/book")}
+                  className="block hover:text-primary transition-colors"
+                >
+                  Get Free Estimate
+                </button>
               </div>
             </div>
           </div>
