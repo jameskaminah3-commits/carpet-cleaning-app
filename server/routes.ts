@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { randomUUID, randomInt } from "crypto";
-import { loginSchema, verifyOtpSchema, ORDER_STATUSES, orders } from "@shared/schema";
+import { loginSchema, verifyOtpSchema, ORDER_STATUSES, orders, mpesaTransactions } from "@shared/schema";
+import { initiateSTKPush, extractCallbackMetadata, type STKCallbackBody } from "./mpesa";
 
 const paramId = (req: Request) => req.params.id as string;
 
@@ -607,31 +608,147 @@ export async function registerRoutes(
     }
   });
 
-  // Payment simulation
   app.post("/api/payments/stk-push", authMiddleware, async (req, res) => {
     try {
       const { orderId, phone } = req.body;
-      if (!orderId) return res.status(400).json({ message: "orderId is required" });
+      if (!orderId || !phone) return res.status(400).json({ message: "orderId and phone are required" });
       const order = await storage.getOrder(orderId);
       if (!order) return res.status(404).json({ message: "Order not found" });
       if (order.customerId !== req.userId) return res.status(403).json({ message: "Access denied" });
-      const amountPaid = order.totalAmount;
-      await storage.updateOrderPrice(order.id, order.totalAmount);
-      const [updated] = await db.update(orders).set({
-        depositPaid: order.totalAmount,
-        balanceDue: "0",
-        updatedAt: new Date(),
-      }).where(eq(orders.id, order.id)).returning();
-      await storage.createNotification({
-        userId: order.customerId,
-        type: "system",
-        title: "Payment Received",
-        message: `Payment of KES ${amountPaid} received for your order`,
+
+      const amount = parseFloat(order.balanceDue) > 0 ? parseFloat(order.balanceDue) : parseFloat(order.totalAmount);
+      if (amount <= 0) return res.status(400).json({ message: "No balance due" });
+
+      const pendingTxns = await storage.getMpesaTransactionsByOrder(order.id);
+      const hasPending = pendingTxns.some(t => t.status === "pending");
+      if (hasPending) return res.status(409).json({ message: "A payment is already being processed for this order. Please wait or try again shortly." });
+
+      const protocol = req.headers["x-forwarded-proto"] || "https";
+      const host = req.headers["x-forwarded-host"] || req.headers.host;
+      const callbackUrl = process.env.MPESA_CALLBACK_URL || `${protocol}://${host}/api/mpesa/stk-callback`;
+
+      const stkResponse = await initiateSTKPush(
+        phone,
+        amount,
+        `ORDER-${order.id.slice(0, 8).toUpperCase()}`,
+        "Sparkle n Glee Carpet Cleaning Payment",
+        callbackUrl
+      );
+
+      const transaction = await storage.createMpesaTransaction({
         orderId: order.id,
-        amount: amountPaid,
-        isRead: false,
+        phone,
+        amount: String(amount),
+        merchantRequestId: stkResponse.MerchantRequestID,
+        checkoutRequestId: stkResponse.CheckoutRequestID,
+        status: "pending",
       });
-      res.json({ success: true, amountPaid });
+
+      res.json({
+        success: true,
+        checkoutRequestId: stkResponse.CheckoutRequestID,
+        transactionId: transaction.id,
+        customerMessage: stkResponse.CustomerMessage,
+      });
+    } catch (err: any) {
+      console.error("[M-Pesa] STK Push error:", err.message);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/mpesa/stk-callback", async (req, res) => {
+    try {
+      const callbackData = req.body as STKCallbackBody;
+      if (!callbackData?.Body?.stkCallback?.CheckoutRequestID || typeof callbackData.Body.stkCallback.ResultCode !== "number") {
+        console.error("[M-Pesa Callback] Invalid callback payload structure");
+        return res.status(400).json({ ResultCode: 1, ResultDesc: "Invalid payload" });
+      }
+      const stkCallback = callbackData.Body.stkCallback;
+
+      console.log(`[M-Pesa Callback] CheckoutRequestID: ${stkCallback.CheckoutRequestID}, ResultCode: ${stkCallback.ResultCode}`);
+
+      const transaction = await storage.getMpesaTransactionByCheckoutRequestId(stkCallback.CheckoutRequestID);
+      if (!transaction) {
+        console.error("[M-Pesa Callback] Transaction not found for CheckoutRequestID:", stkCallback.CheckoutRequestID);
+        return res.json({ ResultCode: 0, ResultDesc: "Accepted" });
+      }
+
+      if (transaction.status !== "pending") {
+        console.log("[M-Pesa Callback] Transaction already processed, skipping:", transaction.id);
+        return res.json({ ResultCode: 0, ResultDesc: "Already processed" });
+      }
+
+      const isSuccess = stkCallback.ResultCode === 0;
+      const metadata = isSuccess ? extractCallbackMetadata(stkCallback) : {};
+
+      if (isSuccess && metadata.amount !== undefined) {
+        const expectedAmount = Math.ceil(parseFloat(transaction.amount));
+        if (metadata.amount < expectedAmount) {
+          console.error(`[M-Pesa Callback] Amount mismatch: expected ${expectedAmount}, got ${metadata.amount}`);
+          await storage.updateMpesaTransactionStatus(transaction.id, {
+            status: "failed",
+            resultCode: stkCallback.ResultCode,
+            resultDesc: `Amount mismatch: expected ${expectedAmount}, received ${metadata.amount}`,
+            rawCallback: callbackData,
+          });
+          return res.json({ ResultCode: 0, ResultDesc: "Accepted" });
+        }
+      }
+
+      await storage.updateMpesaTransactionStatus(transaction.id, {
+        status: isSuccess ? "success" : "failed",
+        resultCode: stkCallback.ResultCode,
+        resultDesc: stkCallback.ResultDesc,
+        mpesaReceiptNumber: metadata.mpesaReceiptNumber || null,
+        rawCallback: callbackData,
+      });
+
+      if (isSuccess) {
+        const order = await storage.getOrder(transaction.orderId);
+        if (order) {
+          const paidAmount = parseFloat(transaction.amount);
+          const newDepositPaid = Math.min(parseFloat(order.depositPaid) + paidAmount, parseFloat(order.totalAmount));
+          const newBalanceDue = Math.max(0, parseFloat(order.totalAmount) - newDepositPaid);
+          await db.update(orders).set({
+            depositPaid: newDepositPaid.toFixed(2),
+            balanceDue: newBalanceDue.toFixed(2),
+            updatedAt: new Date(),
+          }).where(eq(orders.id, order.id));
+
+          await storage.createNotification({
+            userId: order.customerId,
+            type: "system",
+            title: "Payment Received",
+            message: `Payment of KES ${paidAmount.toLocaleString()} received via M-Pesa${metadata.mpesaReceiptNumber ? ` (Receipt: ${metadata.mpesaReceiptNumber})` : ""}`,
+            orderId: order.id,
+            amount: transaction.amount,
+            isRead: false,
+          });
+        }
+      }
+
+      res.json({ ResultCode: 0, ResultDesc: "Accepted" });
+    } catch (err: any) {
+      console.error("[M-Pesa Callback] Error:", err.message);
+      res.json({ ResultCode: 0, ResultDesc: "Accepted" });
+    }
+  });
+
+  app.get("/api/payments/status/:checkoutRequestId", authMiddleware, async (req, res) => {
+    try {
+      const { checkoutRequestId } = req.params;
+      const transaction = await storage.getMpesaTransactionByCheckoutRequestId(checkoutRequestId);
+      if (!transaction) return res.status(404).json({ message: "Transaction not found" });
+
+      const order = await storage.getOrder(transaction.orderId);
+      if (!order || order.customerId !== req.userId) return res.status(403).json({ message: "Access denied" });
+
+      res.json({
+        status: transaction.status,
+        mpesaReceiptNumber: transaction.mpesaReceiptNumber,
+        resultDesc: transaction.resultDesc,
+        amount: transaction.amount,
+      });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

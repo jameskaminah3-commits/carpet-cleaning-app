@@ -50,7 +50,9 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - `GET /api/notifications` - Get user's notifications
 - `PATCH /api/notifications/:id/read` - Mark notification as read
 - `GET /api/notifications/unread-count` - Get unread notification count
-- `POST /api/payments/stk-push` - Simulate M-Pesa STK push payment
+- `POST /api/payments/stk-push` - Initiate real M-Pesa STK push via Safaricom Daraja API
+- `POST /api/mpesa/stk-callback` - Safaricom callback handler (no auth, receives payment result)
+- `GET /api/payments/status/:checkoutRequestId` - Poll transaction status (frontend polling)
 
 ### Admin
 - `GET /api/admin/orders` - All orders (with customer data)
@@ -121,6 +123,7 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - **saved_addresses** (id, userId, label, address, lat, lng, isDefault, createdAt)
 - **notifications** (id, userId, type, title, message, orderId, amount, isRead, createdAt)
 - **reviews** (id, orderId, customerId, rating, comment, isPublic, createdAt)
+- **mpesa_transactions** (id, orderId, phone, amount, mpesaReceiptNumber, merchantRequestId, checkoutRequestId, status, resultCode, resultDesc, rawCallback, createdAt, updatedAt)
 
 ## Customer Tags
 - VIP (purple badge), Frequent (blue badge), Corporate (green badge), One-time (gray badge)

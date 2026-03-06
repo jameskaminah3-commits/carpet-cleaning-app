@@ -3,6 +3,7 @@ import { eq, and, desc, sql, isNull, ne } from "drizzle-orm";
 import {
   users, sessions, orders, orderItems, orderPhotos, pricingRules, deliveryZones,
   mediaLibrary, deliveries, promotions, savedAddresses, notifications, reviews,
+  mpesaTransactions,
   type User, type InsertUser,
   type PricingRule, type InsertPricingRule,
   type DeliveryZone, type InsertDeliveryZone,
@@ -15,6 +16,7 @@ import {
   type SavedAddress, type InsertSavedAddress,
   type Notification, type InsertNotification,
   type Review, type InsertReview,
+  type MpesaTransaction, type InsertMpesaTransaction,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -90,6 +92,12 @@ export interface IStorage {
   createMedia(media: InsertMedia): Promise<Media>;
   updateMedia(id: string, data: Partial<{ title: string; subtitle: string; isPublic: boolean; category: string }>): Promise<Media>;
   deleteMedia(id: string): Promise<void>;
+
+  createMpesaTransaction(tx: InsertMpesaTransaction): Promise<MpesaTransaction>;
+  getMpesaTransaction(id: string): Promise<MpesaTransaction | undefined>;
+  getMpesaTransactionByCheckoutRequestId(checkoutRequestId: string): Promise<MpesaTransaction | undefined>;
+  updateMpesaTransactionStatus(id: string, data: Partial<{ status: string; mpesaReceiptNumber: string; resultCode: number; resultDesc: string; rawCallback: any }>): Promise<MpesaTransaction>;
+  getMpesaTransactionsByOrder(orderId: string): Promise<MpesaTransaction[]>;
 
   getStats(): Promise<{
     totalUsers: number; totalOrders: number; scheduledDeliveries: number; activePromotions: number;
@@ -437,6 +445,30 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMedia(id: string): Promise<void> {
     await db.delete(mediaLibrary).where(eq(mediaLibrary.id, id));
+  }
+
+  async createMpesaTransaction(tx: InsertMpesaTransaction): Promise<MpesaTransaction> {
+    const [created] = await db.insert(mpesaTransactions).values(tx).returning();
+    return created;
+  }
+
+  async getMpesaTransaction(id: string): Promise<MpesaTransaction | undefined> {
+    const [tx] = await db.select().from(mpesaTransactions).where(eq(mpesaTransactions.id, id));
+    return tx;
+  }
+
+  async getMpesaTransactionByCheckoutRequestId(checkoutRequestId: string): Promise<MpesaTransaction | undefined> {
+    const [tx] = await db.select().from(mpesaTransactions).where(eq(mpesaTransactions.checkoutRequestId, checkoutRequestId));
+    return tx;
+  }
+
+  async updateMpesaTransactionStatus(id: string, data: Partial<{ status: string; mpesaReceiptNumber: string; resultCode: number; resultDesc: string; rawCallback: any }>): Promise<MpesaTransaction> {
+    const [updated] = await db.update(mpesaTransactions).set({ ...data, updatedAt: new Date() } as any).where(eq(mpesaTransactions.id, id)).returning();
+    return updated;
+  }
+
+  async getMpesaTransactionsByOrder(orderId: string): Promise<MpesaTransaction[]> {
+    return db.select().from(mpesaTransactions).where(eq(mpesaTransactions.orderId, orderId)).orderBy(desc(mpesaTransactions.createdAt));
   }
 
   async getStats() {

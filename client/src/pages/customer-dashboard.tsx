@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   Sparkles, Home, Package, Tag, UserCircle, ChevronRight, MapPin,
   Plus, Edit3, Clock, CheckCircle2, Bell, Phone, Loader2, X,
-  CreditCard, AlertCircle, Gift, Shield, Star
+  CreditCard, AlertCircle, Gift, Shield, Star, XCircle
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
@@ -57,33 +57,97 @@ function StatusTimeline({ status }: { status: string }) {
 
 function PaymentModal({ open, onClose, order }: { open: boolean; onClose: () => void; order: Order | null }) {
   const [phone, setPhone] = useState("");
-  const [step, setStep] = useState<"input" | "processing" | "success">("input");
+  const [step, setStep] = useState<"input" | "processing" | "success" | "failed">("input");
+  const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [receiptNumber, setReceiptNumber] = useState("");
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollCountRef = useRef(0);
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    pollCountRef.current = 0;
+  }, []);
+
+  const startPolling = useCallback((reqId: string) => {
+    pollCountRef.current = 0;
+    pollIntervalRef.current = setInterval(async () => {
+      pollCountRef.current++;
+      try {
+        const res = await fetch(`/api/payments/status/${reqId}`, { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status === "success") {
+          stopPolling();
+          setReceiptNumber(data.mpesaReceiptNumber || "");
+          setStep("success");
+          queryClient.invalidateQueries({ queryKey: ["/api/orders/my"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+        } else if (data.status === "failed") {
+          stopPolling();
+          setErrorMessage(data.resultDesc || "Payment was not completed. Please try again.");
+          setStep("failed");
+        }
+      } catch {}
+      if (pollCountRef.current >= 30) {
+        stopPolling();
+        setErrorMessage("Payment confirmation timed out. If you completed the payment, it will be reflected shortly.");
+        setStep("failed");
+      }
+    }, 3000);
+  }, [stopPolling]);
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
 
   const payMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/payments/stk-push", { orderId: order?.id, phone }),
-    onSuccess: () => {
-      setStep("success");
-      queryClient.invalidateQueries({ queryKey: ["/api/orders/my"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
-      setTimeout(() => {
-        onClose();
-        setStep("input");
-        setPhone("");
-      }, 2000);
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/payments/stk-push", { orderId: order?.id, phone });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setCheckoutRequestId(data.checkoutRequestId);
+      setStep("processing");
+      startPolling(data.checkoutRequestId);
+    },
+    onError: (err: any) => {
+      setErrorMessage(err.message || "Failed to initiate payment. Please try again.");
+      setStep("failed");
     },
   });
 
   const handlePay = () => {
     if (!phone || phone.length < 9) return;
-    setStep("processing");
+    setErrorMessage("");
     payMutation.mutate();
+  };
+
+  const handleClose = () => {
+    stopPolling();
+    onClose();
+    setStep("input");
+    setPhone("");
+    setCheckoutRequestId(null);
+    setErrorMessage("");
+    setReceiptNumber("");
+  };
+
+  const handleRetry = () => {
+    setStep("input");
+    setErrorMessage("");
+    setCheckoutRequestId(null);
+    setReceiptNumber("");
   };
 
   const balanceDue = order ? parseFloat(order.balanceDue) : 0;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); setStep("input"); } }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -131,10 +195,14 @@ function PaymentModal({ open, onClose, order }: { open: boolean; onClose: () => 
             <Button
               onClick={handlePay}
               className="w-full bg-green-600 hover:bg-green-700 text-white"
-              disabled={!phone || phone.length < 9}
+              disabled={!phone || phone.length < 9 || payMutation.isPending}
               data-testid="button-pay-now"
             >
-              Pay KES {balanceDue.toLocaleString()} via M-Pesa
+              {payMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending...</>
+              ) : (
+                <>Pay KES {balanceDue.toLocaleString()} via M-Pesa</>
+              )}
             </Button>
           </div>
         )}
@@ -145,9 +213,9 @@ function PaymentModal({ open, onClose, order }: { open: boolean; onClose: () => 
               <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
             </div>
             <div>
-              <p className="font-semibold">STK Push Sent</p>
-              <p className="text-sm text-muted-foreground mt-1">Check your phone for the M-Pesa prompt</p>
-              <p className="text-xs text-muted-foreground mt-2">Enter your M-Pesa PIN to complete</p>
+              <p className="font-semibold">Check Your Phone</p>
+              <p className="text-sm text-muted-foreground mt-1">Enter your M-Pesa PIN to complete the payment</p>
+              <p className="text-xs text-muted-foreground mt-3">Waiting for confirmation...</p>
             </div>
           </div>
         )}
@@ -159,7 +227,33 @@ function PaymentModal({ open, onClose, order }: { open: boolean; onClose: () => 
             </div>
             <div>
               <p className="font-semibold text-green-700 dark:text-green-400">Payment Successful!</p>
-              <p className="text-sm text-muted-foreground mt-1">KES {balanceDue.toLocaleString()} paid</p>
+              <p className="text-sm text-muted-foreground mt-1">KES {balanceDue.toLocaleString()} paid via M-Pesa</p>
+              {receiptNumber && (
+                <p className="text-xs text-muted-foreground mt-2">Receipt: {receiptNumber}</p>
+              )}
+            </div>
+            <Button onClick={handleClose} variant="outline" className="mt-4" data-testid="button-payment-done">
+              Done
+            </Button>
+          </div>
+        )}
+
+        {step === "failed" && (
+          <div className="text-center py-8 space-y-4">
+            <div className="w-16 h-16 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+              <XCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-red-700 dark:text-red-400">Payment Not Completed</p>
+              <p className="text-sm text-muted-foreground mt-1">{errorMessage}</p>
+            </div>
+            <div className="flex gap-2 justify-center mt-4">
+              <Button onClick={handleRetry} variant="outline" data-testid="button-payment-retry">
+                Try Again
+              </Button>
+              <Button onClick={handleClose} variant="ghost" data-testid="button-payment-cancel">
+                Cancel
+              </Button>
             </div>
           </div>
         )}
