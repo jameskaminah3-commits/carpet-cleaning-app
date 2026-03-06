@@ -186,6 +186,26 @@ export const reviews = pgTable("reviews", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const mpesaTransactionStatusEnum = pgEnum("mpesa_transaction_status", ["pending", "success", "failed"]);
+
+export const mpesaTransactions = pgTable("mpesa_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  phone: text("phone").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  mpesaReceiptNumber: text("mpesa_receipt_number"),
+  merchantRequestId: text("merchant_request_id"),
+  checkoutRequestId: text("checkout_request_id"),
+  status: mpesaTransactionStatusEnum("status").notNull().default("pending"),
+  resultCode: integer("result_code"),
+  resultDesc: text("result_desc"),
+  rawCallback: jsonb("raw_callback"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertMpesaTransactionSchema = createInsertSchema(mpesaTransactions).omit({ id: true, createdAt: true, updatedAt: true });
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, otpCode: true, otpExpiry: true, createdAt: true });
 export const insertPricingRuleSchema = createInsertSchema(pricingRules).omit({ id: true });
 export const insertDeliveryZoneSchema = createInsertSchema(deliveryZones).omit({ id: true });
@@ -223,6 +243,8 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
+export type InsertMpesaTransaction = z.infer<typeof insertMpesaTransactionSchema>;
+export type MpesaTransaction = typeof mpesaTransactions.$inferSelect;
 
 export const phoneSchema = z.string().transform((val) => {
   let cleaned = val.replace(/\s+/g, "").replace(/-/g, "");
