@@ -27,12 +27,18 @@ export async function generateAccessToken(): Promise<string> {
     headers: { Authorization: `Basic ${auth}` },
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to get M-Pesa access token: ${response.status} ${text}`);
+    throw new Error(`Failed to get M-Pesa access token: ${response.status} ${responseText}`);
   }
 
-  const data = await response.json() as { access_token: string; expires_in: string };
+  let data: { access_token: string; expires_in: string };
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    throw new Error(`M-Pesa auth returned invalid response: ${responseText.slice(0, 200)}`);
+  }
   const expiresInMs = (parseInt(data.expires_in) - 60) * 1000;
 
   cachedToken = {
@@ -135,7 +141,14 @@ export async function initiateSTKPush(
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json() as any;
+  const responseText = await response.text();
+  let data: any;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    console.error("[M-Pesa] STK Push returned non-JSON response:", responseText.slice(0, 300));
+    throw new Error("M-Pesa service is temporarily unavailable. Please try again in a moment.");
+  }
 
   if (!response.ok || data.errorCode) {
     console.error("[M-Pesa] STK Push failed:", data);
