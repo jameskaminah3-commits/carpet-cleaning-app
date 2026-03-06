@@ -26,6 +26,8 @@ import {
   Timer,
   Award,
   MessageCircle,
+  Menu,
+  X,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -83,7 +85,7 @@ function SparkleStarSVG({
 function HeroBackground() {
   const sparkles = useMemo(
     () =>
-      Array.from({ length: 25 }, (_, i) => ({
+      Array.from({ length: 15 }, (_, i) => ({
         left: `${3 + ((i * 3.9) % 94)}%`,
         top: `${3 + ((i * 4.1) % 90)}%`,
         size: 3 + (i % 5) * 2,
@@ -95,25 +97,29 @@ function HeroBackground() {
 
   return (
     <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9] via-[#5A9DF5] to-[#C8DFFF]" />
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        poster="/hero-video-poster.jpg"
+        className="absolute inset-0 w-full h-full object-cover"
+        aria-hidden="true"
+        data-testid="video-hero-background"
+      >
+        <source src="/hero-video.mp4" type="video/mp4" />
+      </video>
 
-      <div className="hero-glow-pulse absolute w-[500px] h-[500px] rounded-full bg-white/25 blur-[120px] top-[10%] left-[10%]" />
-      <div
-        className="hero-glow-pulse absolute w-[400px] h-[400px] rounded-full bg-[#6ED3FF]/25 blur-[100px] top-[30%] right-[10%]"
-        style={{ animationDelay: "3s" }}
-      />
-      <div
-        className="hero-glow-pulse absolute w-[350px] h-[350px] rounded-full bg-[#5EE6A8]/15 blur-[90px] bottom-[15%] left-[35%]"
-        style={{ animationDelay: "5s" }}
-      />
+      <div className="absolute inset-0 bg-[#AED6F1]/35" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9]/60 via-[#3A86E9]/40 to-[#1a1a2e]/65" />
 
       {sparkles.map((s, i) => (
         <motion.div
           key={i}
-          className="absolute text-white/50"
+          className="absolute text-white/40"
           style={{ left: s.left, top: s.top }}
           animate={{
-            opacity: [0, 0.8, 0],
+            opacity: [0, 0.6, 0],
             scale: [0.3, 1, 0.3],
           }}
           transition={{
@@ -675,6 +681,7 @@ function TestimonialsCarousel() {
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -695,11 +702,11 @@ export default function LandingPage() {
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <a
-              href="#technology"
+              href="#our-process"
               className="hover:text-foreground transition-colors"
-              data-testid="link-technology"
+              data-testid="link-our-process"
             >
-              Technology
+              Our Process
             </a>
             <a
               href="#how-it-works"
@@ -720,7 +727,7 @@ export default function LandingPage() {
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full"
+              className="hidden sm:inline-flex rounded-full"
               onClick={() => navigate("/login")}
               data-testid="button-login"
             >
@@ -728,14 +735,83 @@ export default function LandingPage() {
             </Button>
             <button
               onClick={() => navigate("/book")}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-white px-5 py-2 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-md hover:scale-105 transition-all duration-200"
+              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-white px-5 py-2 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-md hover:scale-105 transition-all duration-200"
               data-testid="button-book-now"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Free Quote
             </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="button-mobile-menu"
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-nav-menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden overflow-hidden border-t bg-background"
+              id="mobile-nav-menu"
+              data-testid="mobile-menu"
+            >
+              <div className="px-4 py-4 space-y-3">
+                <a
+                  href="#our-process"
+                  className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-testid="link-our-process-mobile"
+                >
+                  Our Process
+                </a>
+                <a
+                  href="#how-it-works"
+                  className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-testid="link-how-it-works-mobile"
+                >
+                  How It Works
+                </a>
+                <a
+                  href="#testimonials"
+                  className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-testid="link-testimonials-mobile"
+                >
+                  Reviews
+                </a>
+                <div className="pt-2 flex flex-col gap-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-full"
+                    onClick={() => { setMobileMenuOpen(false); navigate("/login"); }}
+                    data-testid="button-login-mobile"
+                  >
+                    Sign In
+                  </Button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); navigate("/book"); }}
+                    className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white px-5 py-2 rounded-full bg-gradient-to-r from-[#2E77D0] to-[#3A86E9] shadow-md"
+                    data-testid="button-book-now-mobile"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Free Quote
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       <section className="relative min-h-[90vh] flex items-center overflow-hidden">
@@ -1126,7 +1202,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="technology" className="py-20 sm:py-28">
+      <section id="our-process" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="hidden"
@@ -1400,10 +1476,10 @@ export default function LandingPage() {
               </p>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <a
-                  href="#technology"
+                  href="#our-process"
                   className="block hover:text-primary transition-colors"
                 >
-                  Our Technology
+                  Our Process
                 </a>
                 <a
                   href="#how-it-works"
