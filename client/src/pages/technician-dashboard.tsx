@@ -73,8 +73,8 @@ export default function TechnicianDashboard() {
     }
   };
 
-  const activeTasks = tasks.filter((t) => t.status !== "COMPLETED");
-  const doneTasks = tasks.filter((t) => t.status === "COMPLETED");
+  const activeTasks = tasks.filter((t) => t.status !== "COMPLETED" && t.status !== "DELIVERED");
+  const doneTasks = tasks.filter((t) => t.status === "COMPLETED" || t.status === "DELIVERED");
 
   const activeDeliveries = myDeliveries.filter(d => d.status !== "completed");
   const completedDeliveries = myDeliveries.filter(d => d.status === "completed");

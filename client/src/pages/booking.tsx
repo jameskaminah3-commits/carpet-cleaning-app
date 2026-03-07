@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, ArrowLeft, ArrowRight, Plus, X, MapPin, Camera, Loader2, CheckCircle2, Calculator, Tag, Gift } from "lucide-react";
+import { Sparkles, ArrowLeft, ArrowRight, Plus, X, MapPin, Camera, Loader2, CheckCircle2, Calculator, Tag, Gift, Truck, Building2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -46,6 +46,8 @@ export default function BookingPage() {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [items, setItems] = useState<CarpetItem[]>([{ ...emptyItem }]);
+  const [pickupOption, setPickupOption] = useState<"customer_delivers" | "request_pickup">("customer_delivers");
+  const [returnOption, setReturnOption] = useState<"customer_collects" | "request_delivery">("customer_collects");
   const [selectedZone, setSelectedZone] = useState("");
   const [address, setAddress] = useState("");
   const [locationName, setLocationName] = useState("");
@@ -84,6 +86,13 @@ export default function BookingPage() {
     },
   });
 
+  const needsLocation = pickupOption === "request_pickup" || returnOption === "request_delivery";
+  const zone = zones.find((z) => z.id === selectedZone);
+  const zoneFee = zone ? parseFloat(zone.fee) : 0;
+  const pickupFee = pickupOption === "request_pickup" && zone ? zoneFee : 0;
+  const deliveryFee = returnOption === "request_delivery" && zone ? zoneFee : 0;
+  const itemsTotal = items.reduce((sum, item) => sum + getItemEstimate(item, pricing).subtotal, 0);
+
   const getDiscount = () => {
     if (!appliedPromo) return 0;
     const subtotal = itemsTotal;
@@ -93,11 +102,16 @@ export default function BookingPage() {
     if (appliedPromo.promoType === "fixed" && appliedPromo.discountValue) {
       return Math.min(parseFloat(appliedPromo.discountValue), subtotal);
     }
-    if (appliedPromo.promoType === "free_pickup" || appliedPromo.promoType === "free_delivery") {
+    if (appliedPromo.promoType === "free_pickup") {
+      return pickupFee;
+    }
+    if (appliedPromo.promoType === "free_delivery") {
       return deliveryFee;
     }
     return 0;
   };
+
+  const grandTotal = Math.max(0, itemsTotal + pickupFee + deliveryFee - getDiscount());
 
   const createOrder = useMutation({
     mutationFn: async () => {
@@ -114,22 +128,19 @@ export default function BookingPage() {
         };
       });
 
-      const totalAmount = orderItems.reduce((sum, i) => sum + i.subtotal, 0);
-      const zone = zones.find((z) => z.id === selectedZone);
-      const zoneFee = zone ? parseFloat(zone.fee) : 0;
-      const discount = getDiscount();
-      const grandTotal = Math.max(0, totalAmount + zoneFee - discount);
-
       const res = await apiRequest("POST", "/api/orders", {
         items: orderItems,
-        deliveryZoneId: selectedZone || undefined,
-        pickupAddress: address,
-        locationName,
+        pickupOption,
+        returnOption,
+        deliveryZoneId: needsLocation ? selectedZone || undefined : undefined,
+        pickupAddress: needsLocation ? address : undefined,
+        locationName: needsLocation ? locationName : undefined,
         notes,
         totalAmount: grandTotal,
         promotionId: appliedPromo?.id || undefined,
-        discountAmount: discount,
-        deliveryFee: zoneFee,
+        discountAmount: getDiscount(),
+        pickupFee,
+        deliveryFee,
       });
       const order = await res.json();
       if (photos.length > 0 && order?.id) {
@@ -156,7 +167,7 @@ export default function BookingPage() {
       return order;
     },
     onSuccess: () => {
-      toast({ title: "Order Created!", description: "Your booking has been submitted successfully." });
+      toast({ title: "Order Submitted!", description: "Your booking has been submitted for review." });
       navigate("/customer");
     },
     onError: (err: Error) => {
@@ -187,16 +198,6 @@ export default function BookingPage() {
     setItems((prev) => [...prev, { ...emptyItem }]);
   };
 
-  const getEstimate = () => {
-    let total = 0;
-    items.forEach((item) => {
-      total += getItemEstimate(item, pricing).subtotal;
-    });
-    const zone = zones.find((z) => z.id === selectedZone);
-    if (zone) total += parseFloat(zone.fee);
-    return total;
-  };
-
   const canProceed = () => {
     if (step === 0) {
       return items.every(
@@ -207,15 +208,16 @@ export default function BookingPage() {
       );
     }
     if (step === 1) return true;
-    if (step === 2) return address.trim().length > 0;
+    if (step === 2) {
+      if (needsLocation) {
+        return address.trim().length > 0 && selectedZone !== "";
+      }
+      return true;
+    }
     return true;
   };
 
-  const stepLabels = ["Carpet Details", "Photos", "Delivery", "Review"];
-
-  const itemsTotal = items.reduce((sum, item) => sum + getItemEstimate(item, pricing).subtotal, 0);
-  const zone = zones.find((z) => z.id === selectedZone);
-  const deliveryFee = zone ? parseFloat(zone.fee) : 0;
+  const stepLabels = ["Carpet Details", "Photos", "Pickup & Return", "Review"];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -377,7 +379,7 @@ export default function BookingPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">Estimated Cleaning Cost</p>
-                        <p className="text-xs text-slate-300">{items.length} carpet{items.length > 1 ? "s" : ""} &middot; Delivery fee added next</p>
+                        <p className="text-xs text-slate-300">{items.length} carpet{items.length > 1 ? "s" : ""} &middot; Fees added next</p>
                       </div>
                       <p className="text-xl font-bold text-primary" data-testid="text-running-total">
                         KES {itemsTotal.toLocaleString()}
@@ -448,49 +450,147 @@ export default function BookingPage() {
             <motion.div key="step-2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-sans font-bold mb-1" data-testid="text-step-title">Pickup Location</h2>
-                  <p className="text-sm text-muted-foreground">Where should we pick up your carpets?</p>
+                  <h2 className="text-xl font-sans font-bold mb-1" data-testid="text-step-title">Pickup & Return</h2>
+                  <p className="text-sm text-muted-foreground">Choose how you'd like us to handle your carpet pickup and return.</p>
                 </div>
+
+                <Card className="p-5 space-y-2">
+                  <Label className="text-sm font-semibold">How should we get your carpet?</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPickupOption("customer_delivers")}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        pickupOption === "customer_delivers"
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-muted hover:border-primary/30"
+                      }`}
+                      data-testid="option-bring-it"
+                    >
+                      <Building2 className={`w-8 h-8 ${pickupOption === "customer_delivers" ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="text-sm font-medium text-center">I'll bring it</span>
+                      <span className="text-[10px] text-muted-foreground text-center">Drop off at our premises</span>
+                      <Badge variant="secondary" className="text-[10px]">Free</Badge>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPickupOption("request_pickup")}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        pickupOption === "request_pickup"
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-muted hover:border-primary/30"
+                      }`}
+                      data-testid="option-pickup"
+                    >
+                      <Truck className={`w-8 h-8 ${pickupOption === "request_pickup" ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="text-sm font-medium text-center">Pick up from me</span>
+                      <span className="text-[10px] text-muted-foreground text-center">We come to your location</span>
+                      <Badge variant="outline" className="text-[10px]">Fee applies</Badge>
+                    </button>
+                  </div>
+                </Card>
+
+                <Card className="p-5 space-y-2">
+                  <Label className="text-sm font-semibold">How should we return your carpet?</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setReturnOption("customer_collects")}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        returnOption === "customer_collects"
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-muted hover:border-primary/30"
+                      }`}
+                      data-testid="option-collect-it"
+                    >
+                      <Building2 className={`w-8 h-8 ${returnOption === "customer_collects" ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="text-sm font-medium text-center">I'll collect it</span>
+                      <span className="text-[10px] text-muted-foreground text-center">Pick up from our premises</span>
+                      <Badge variant="secondary" className="text-[10px]">Free</Badge>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReturnOption("request_delivery")}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        returnOption === "request_delivery"
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-muted hover:border-primary/30"
+                      }`}
+                      data-testid="option-delivery"
+                    >
+                      <Truck className={`w-8 h-8 ${returnOption === "request_delivery" ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="text-sm font-medium text-center">Deliver to me</span>
+                      <span className="text-[10px] text-muted-foreground text-center">We deliver to your location</span>
+                      <Badge variant="outline" className="text-[10px]">Fee applies</Badge>
+                    </button>
+                  </div>
+                </Card>
+
+                {needsLocation && (
+                  <Card className="p-5 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" />
+                      <Label className="text-sm font-semibold">
+                        {pickupOption === "request_pickup" && returnOption === "request_delivery"
+                          ? "Pickup & Delivery Location"
+                          : pickupOption === "request_pickup"
+                          ? "Pickup Location"
+                          : "Delivery Location"}
+                      </Label>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Area / Zone</Label>
+                      <Select value={selectedZone} onValueChange={setSelectedZone}>
+                        <SelectTrigger data-testid="select-delivery-zone">
+                          <SelectValue placeholder="Select your area" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {zones.map((z) => (
+                            <SelectItem key={z.id} value={z.id}>
+                              {z.name} — KES {parseFloat(z.fee).toLocaleString()}/trip
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {zone && (
+                        <div className="mt-2 space-y-1">
+                          {pickupOption === "request_pickup" && (
+                            <p className="text-xs text-muted-foreground">Pickup fee: <span className="font-medium text-foreground">KES {zoneFee.toLocaleString()}</span></p>
+                          )}
+                          {returnOption === "request_delivery" && (
+                            <p className="text-xs text-muted-foreground">Delivery fee: <span className="font-medium text-foreground">KES {zoneFee.toLocaleString()}</span></p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs">Location Name</Label>
+                      <Input
+                        placeholder="e.g., Westlands, Kilimani"
+                        value={locationName}
+                        onChange={(e) => setLocationName(e.target.value)}
+                        data-testid="input-location-name"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Address</Label>
+                      <Textarea
+                        placeholder="Building name, floor, apartment..."
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className="resize-none"
+                        rows={3}
+                        data-testid="input-address"
+                      />
+                    </div>
+                  </Card>
+                )}
+
                 <Card className="p-5 space-y-4">
-                  <div>
-                    <Label className="text-xs">Delivery Zone</Label>
-                    <Select value={selectedZone} onValueChange={setSelectedZone}>
-                      <SelectTrigger data-testid="select-delivery-zone">
-                        <SelectValue placeholder="Select your area" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {zones.map((z) => (
-                          <SelectItem key={z.id} value={z.id}>
-                            {z.name} — KES {parseFloat(z.fee).toLocaleString()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Location Name</Label>
-                    <Input
-                      placeholder="e.g., Westlands, Kilimani"
-                      value={locationName}
-                      onChange={(e) => setLocationName(e.target.value)}
-                      data-testid="input-location-name"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Pickup Address</Label>
-                    <Textarea
-                      placeholder="Building name, floor, apartment..."
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="resize-none"
-                      rows={3}
-                      data-testid="input-address"
-                    />
-                  </div>
                   <div>
                     <Label className="text-xs">Special Notes</Label>
                     <Textarea
-                      placeholder="Any special instructions for pickup..."
+                      placeholder="Any special instructions..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       className="resize-none"
@@ -526,6 +626,26 @@ export default function BookingPage() {
                       </div>
                     );
                   })}
+
+                  <div className="border-t pt-3">
+                    <h3 className="font-semibold text-sm mb-2">Pickup & Return</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2 text-xs">
+                        {pickupOption === "request_pickup" ? (
+                          <><Truck className="w-3.5 h-3.5 text-primary" /><span>We pick up</span></>
+                        ) : (
+                          <><Building2 className="w-3.5 h-3.5 text-muted-foreground" /><span>I'll bring it</span></>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {returnOption === "request_delivery" ? (
+                          <><Truck className="w-3.5 h-3.5 text-primary" /><span>We deliver</span></>
+                        ) : (
+                          <><Building2 className="w-3.5 h-3.5 text-muted-foreground" /><span>I'll collect</span></>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="border-t pt-3 mt-3">
                     <div className="flex items-center gap-2 mb-2">
@@ -575,7 +695,13 @@ export default function BookingPage() {
                       <span className="text-muted-foreground">Cleaning</span>
                       <span>KES {itemsTotal.toLocaleString()}</span>
                     </div>
-                    {selectedZone && (
+                    {pickupFee > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Pickup ({zone?.name})</span>
+                        <span>KES {pickupFee.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {deliveryFee > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Delivery ({zone?.name})</span>
                         <span>KES {deliveryFee.toLocaleString()}</span>
@@ -590,16 +716,21 @@ export default function BookingPage() {
                     <div className="flex items-center justify-between pt-2 border-t">
                       <p className="font-bold">Estimated Total</p>
                       <p className="font-bold text-xl text-primary" data-testid="text-total">
-                        KES {Math.max(0, getEstimate() - getDiscount()).toLocaleString()}
+                        KES {grandTotal.toLocaleString()}
                       </p>
                     </div>
                   </div>
                 </Card>
 
-                {address && (
+                {needsLocation && address && (
                   <Card className="p-5">
                     <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary" /> Pickup Location
+                      <MapPin className="w-4 h-4 text-primary" />
+                      {pickupOption === "request_pickup" && returnOption === "request_delivery"
+                        ? "Pickup & Delivery Location"
+                        : pickupOption === "request_pickup"
+                        ? "Pickup Location"
+                        : "Delivery Location"}
                     </h3>
                     <p className="text-sm">{locationName}</p>
                     <p className="text-sm text-muted-foreground">{address}</p>

@@ -132,6 +132,8 @@ function OrderDetailDialog({ open, onClose, order }: { open: boolean; onClose: (
             <div><span className="text-muted-foreground">Balance Due:</span> <span className="font-bold text-red-600">KES {parseFloat(order.balanceDue).toLocaleString()}</span></div>
             <div><span className="text-muted-foreground">Deposit:</span> KES {parseFloat(order.depositPaid).toLocaleString()}</div>
             <div><span className="text-muted-foreground">Status:</span> {order.status}</div>
+            {(order as any).pickupOption && <div><span className="text-muted-foreground">Pickup:</span> {(order as any).pickupOption === "request_pickup" ? "We pick up" : "Customer brings"}</div>}
+            {(order as any).returnOption && <div><span className="text-muted-foreground">Return:</span> {(order as any).returnOption === "request_delivery" ? "We deliver" : "Customer collects"}</div>}
             {order.locationName && <div className="col-span-2"><span className="text-muted-foreground">Location:</span> {order.locationName}</div>}
             {order.notes && <div className="col-span-2"><span className="text-muted-foreground">Notes:</span> {order.notes}</div>}
           </div>

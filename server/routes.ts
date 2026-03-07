@@ -172,7 +172,7 @@ export async function registerRoutes(
 
   app.post("/api/orders", authMiddleware, async (req, res) => {
     try {
-      const { items, deliveryZoneId, pickupAddress, locationName, notes, totalAmount, promotionId, discountAmount, pickupFee, deliveryFee, expressFee } = req.body;
+      const { items, deliveryZoneId, pickupAddress, locationName, notes, totalAmount, promotionId, discountAmount, pickupFee, deliveryFee, expressFee, pickupOption, returnOption } = req.body;
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: "At least one carpet item is required" });
@@ -182,6 +182,13 @@ export async function registerRoutes(
         if (!item.carpetType || !item.width || !item.length || item.width <= 0 || item.length <= 0) {
           return res.status(400).json({ message: "Each carpet item must have valid type, width, and length" });
         }
+      }
+
+      if ((pickupOption === "request_pickup" || returnOption === "request_delivery") && !deliveryZoneId) {
+        return res.status(400).json({ message: "Please select a delivery zone for pickup/delivery service" });
+      }
+      if ((pickupOption === "request_pickup" || returnOption === "request_delivery") && (!pickupAddress || !pickupAddress.trim())) {
+        return res.status(400).json({ message: "Please provide an address for pickup/delivery service" });
       }
 
       const pricingRulesSnapshot = await storage.getPricingRules();
@@ -195,11 +202,14 @@ export async function registerRoutes(
       }
 
       let zone = null;
+      let serverPickupFee = 0;
       let serverDeliveryFee = 0;
       if (deliveryZoneId) {
         const zones = await storage.getDeliveryZones();
         zone = zones.find(z => z.id === deliveryZoneId);
-        serverDeliveryFee = zone ? parseFloat(zone.fee) : 0;
+        const zoneFee = zone ? parseFloat(zone.fee) : 0;
+        if (pickupOption === "request_pickup") serverPickupFee = zoneFee;
+        if (returnOption === "request_delivery") serverDeliveryFee = zoneFee;
       }
 
       let serverDiscount = 0;
@@ -229,11 +239,13 @@ export async function registerRoutes(
         }
       }
 
-      const serverTotal = Math.max(0, serverItemsTotal + serverDeliveryFee - serverDiscount);
+      const serverTotal = Math.max(0, serverItemsTotal + serverPickupFee + serverDeliveryFee - serverDiscount);
 
       const order = await storage.createOrder({
         customerId: req.userId!,
-        status: "PENDING",
+        status: "SUBMITTED",
+        pickupOption: pickupOption || "customer_delivers",
+        returnOption: returnOption || "customer_collects",
         totalAmount: String(serverTotal),
         depositPaid: "0",
         balanceDue: String(serverTotal),
@@ -248,7 +260,7 @@ export async function registerRoutes(
         pricingSnapshot: { rules: pricingRulesSnapshot, timestamp: new Date().toISOString() },
         promotionId: validPromoId,
         discountAmount: String(serverDiscount),
-        pickupFee: String(pickupFee || 0),
+        pickupFee: String(serverPickupFee),
         deliveryFee: String(serverDeliveryFee),
         expressFee: String(expressFee || 0),
       });
@@ -350,7 +362,7 @@ export async function registerRoutes(
 
   app.patch("/api/admin/orders/:id/status", authMiddleware, adminMiddleware, async (req, res) => {
     try {
-      const validStatuses = ["PENDING", "AWAITING_PICKUP", "IN_CLEANING", "DRYING", "READY", "COMPLETED"];
+      const validStatuses = ["SUBMITTED", "PENDING", "AWAITING_PICKUP", "PENDING_PAYMENT", "IN_CLEANING", "DRYING", "READY", "DELIVERED", "COMPLETED"];
       if (!req.body.status || !validStatuses.includes(req.body.status)) {
         return res.status(400).json({ message: "Invalid status value" });
       }
@@ -358,6 +370,17 @@ export async function registerRoutes(
       if (!order) return res.status(404).json({ message: "Order not found" });
       if (req.body.status === "IN_CLEANING" && parseFloat(order.balanceDue) > 0) {
         return res.status(400).json({ message: `Cannot start cleaning — customer has outstanding balance of KES ${parseFloat(order.balanceDue).toLocaleString()}. Payment must be cleared first.` });
+      }
+      if (req.body.status === "PENDING_PAYMENT" && order.status === "SUBMITTED") {
+        await storage.createNotification({
+          userId: order.customerId,
+          type: "payment_request",
+          title: "Payment Required",
+          message: `Your order has been reviewed. Please pay KES ${parseFloat(order.balanceDue).toLocaleString()} to begin cleaning.`,
+          orderId: order.id,
+          amount: order.balanceDue,
+          isRead: false,
+        });
       }
       await storage.updateOrderStatus(paramId(req), req.body.status);
       const statusInfo = ORDER_STATUSES.find(s => s.value === req.body.status);

@@ -496,9 +496,9 @@ export class DatabaseStorage implements IStorage {
     const activePromos = await db.select().from(promotions).where(eq(promotions.isActive, true));
 
     const total = allOrders.length;
-    const pending = allOrders.filter((o) => o.status === "PENDING").length;
-    const completed = allOrders.filter((o) => o.status === "COMPLETED").length;
-    const inProgress = allOrders.filter((o) => !["PENDING", "COMPLETED"].includes(o.status)).length;
+    const pending = allOrders.filter((o) => o.status === "SUBMITTED" || o.status === "PENDING" || o.status === "PENDING_PAYMENT").length;
+    const completed = allOrders.filter((o) => o.status === "COMPLETED" || o.status === "DELIVERED").length;
+    const inProgress = allOrders.filter((o) => !["SUBMITTED", "PENDING", "PENDING_PAYMENT", "COMPLETED", "DELIVERED"].includes(o.status)).length;
     const revenue = allOrders.filter((o) => o.status === "COMPLETED").reduce((sum, o) => sum + parseFloat(o.totalAmount), 0);
 
     return {
@@ -584,6 +584,8 @@ export class DatabaseStorage implements IStorage {
       customerId: customer1.id,
       technicianId: tech.id,
       status: "COMPLETED",
+      pickupOption: "request_pickup",
+      returnOption: "request_delivery",
       totalAmount: "9000",
       depositPaid: "9000",
       balanceDue: "0",

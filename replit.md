@@ -119,7 +119,7 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - **sessions** (id, userId, token, expiresAt)
 - **pricing_rules** (id, name, description, pricePerSqMeter, carpetType, isActive)
 - **delivery_zones** (id, name, description, fee, isActive)
-- **orders** (id, customerId, technicianId, status, totalAmount, depositPaid, balanceDue, isLocked, deliveryZoneId, pickupAddress, notes, locationLat, locationLng, locationName, pricingSnapshot, promotionId, discountAmount, pickupFee, deliveryFee, expressFee, createdAt, updatedAt)
+- **orders** (id, customerId, technicianId, status, pickupOption, returnOption, totalAmount, depositPaid, balanceDue, isLocked, deliveryZoneId, pickupAddress, notes, locationLat, locationLng, locationName, pricingSnapshot, promotionId, discountAmount, pickupFee, deliveryFee, expressFee, createdAt, updatedAt)
 - **order_items** (id, orderId, carpetType, width, length, quantity, unitPrice, subtotal, description)
 - **order_photos** (id, orderId, fileKey, photoType, uploadedAt)
 - **media_library** (id, title, subtitle, fileKey, mimeType, category, isPublic, uploadedAt)
@@ -134,7 +134,18 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 - VIP (purple badge), Frequent (blue badge), Corporate (green badge), One-time (gray badge)
 
 ## Order Statuses
-PENDING → AWAITING_PICKUP → IN_CLEANING → DRYING → READY → COMPLETED
+SUBMITTED → AWAITING_PICKUP (if pickup requested) → PENDING_PAYMENT → IN_CLEANING → DRYING → READY → DELIVERED (if delivery requested) → COMPLETED
+
+### Status Flow
+- Customer submits order → **SUBMITTED** (waiting for admin review)
+- Admin assigns pickup technician (if pickup requested) → **AWAITING_PICKUP**
+- Admin reviews/adjusts price → **PENDING_PAYMENT** (customer must pay before cleaning)
+- Customer pays → **IN_CLEANING** → **DRYING** → **READY**
+- Admin assigns delivery or customer collects → **DELIVERED** / **COMPLETED**
+
+### Pickup & Return Options
+- **pickupOption**: `customer_delivers` (free) or `request_pickup` (zone fee applies)
+- **returnOption**: `customer_collects` (free) or `request_delivery` (zone fee applies)
 
 ## Security
 - Frontend route guards: Protected routes redirect unauthorized users based on role

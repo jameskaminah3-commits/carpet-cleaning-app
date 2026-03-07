@@ -24,13 +24,19 @@ const fadeUp = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } };
 
 type Tab = "home" | "orders" | "offers" | "profile";
 
-function StatusTimeline({ status }: { status: string }) {
-  const steps = ORDER_STATUSES;
-  const currentIdx = steps.findIndex(s => s.value === status);
+function StatusTimeline({ status, pickupOption, returnOption }: { status: string; pickupOption?: string; returnOption?: string }) {
+  const effectiveStatus = status === "PENDING" ? "SUBMITTED" : status;
+  const timelineSteps = ORDER_STATUSES.filter(s => {
+    if (s.value === "AWAITING_PICKUP" && pickupOption !== "request_pickup") return false;
+    if (s.value === "DELIVERED" && returnOption !== "request_delivery") return false;
+    if (s.value === "PENDING") return false;
+    return true;
+  });
+  const currentIdx = timelineSteps.findIndex(s => s.value === effectiveStatus);
 
   return (
     <div className="flex items-center gap-0 w-full mt-2" data-testid="order-status-timeline">
-      {steps.map((step, i) => {
+      {timelineSteps.map((step, i) => {
         const isActive = i <= currentIdx;
         const isCurrent = i === currentIdx;
         return (
@@ -42,7 +48,7 @@ function StatusTimeline({ status }: { status: string }) {
                 } ${isCurrent ? "ring-2 ring-primary/30 ring-offset-1" : ""}`}
               />
             </div>
-            {i < steps.length - 1 && (
+            {i < timelineSteps.length - 1 && (
               <div className={`h-0.5 w-full -mt-[7px] ${isActive && i < currentIdx ? "bg-primary" : "bg-muted-foreground/20"}`} />
             )}
             <p className={`text-[9px] mt-1.5 text-center leading-tight ${isActive ? "text-foreground font-medium" : "text-muted-foreground"}`}>
@@ -375,7 +381,7 @@ function HomeTab({ user, orders }: { user: User; orders: (Order & { items?: Orde
 
   const latestOrder = orders[0];
   const latestStatusInfo = latestOrder ? ORDER_STATUSES.find(s => s.value === latestOrder.status) : null;
-  const activeOrders = orders.filter(o => o.status !== "COMPLETED");
+  const activeOrders = orders.filter(o => o.status !== "COMPLETED" && o.status !== "DELIVERED");
 
   return (
     <div className="space-y-5">
@@ -435,13 +441,21 @@ function HomeTab({ user, orders }: { user: User; orders: (Order & { items?: Orde
                       <p className="font-bold text-sm">KES {parseFloat(order.totalAmount).toLocaleString()}</p>
                     </div>
                   </div>
-                  <StatusTimeline status={order.status} />
-                  {hasDue && (
+                  <StatusTimeline status={order.status} pickupOption={(order as any).pickupOption} returnOption={(order as any).returnOption} />
+                  {(order.status === "SUBMITTED" || order.status === "PENDING") && (
+                    <div className="mt-3 flex items-center gap-2 bg-slate-50 dark:bg-slate-900/20 rounded-lg p-2.5">
+                      <Clock className="w-4 h-4 text-slate-500" />
+                      <span className="text-xs font-medium text-slate-700 dark:text-slate-400">
+                        Submitted — waiting for review
+                      </span>
+                    </div>
+                  )}
+                  {(order.status === "PENDING_PAYMENT" || (hasDue && order.status !== "SUBMITTED" && order.status !== "PENDING")) && hasDue && (
                     <div className="mt-3 flex items-center justify-between bg-red-50 dark:bg-red-900/20 rounded-lg p-2.5">
                       <div className="flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-red-500" />
                         <span className="text-xs font-medium text-red-700 dark:text-red-400">
-                          Balance: KES {parseFloat(order.balanceDue).toLocaleString()}
+                          {order.status === "PENDING_PAYMENT" ? "Pay to begin cleaning" : `Balance: KES ${parseFloat(order.balanceDue).toLocaleString()}`}
                         </span>
                       </div>
                       <Button
@@ -522,8 +536,8 @@ function HomeTab({ user, orders }: { user: User; orders: (Order & { items?: Orde
 }
 
 function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) {
-  const activeOrders = orders.filter(o => o.status !== "COMPLETED");
-  const completedOrders = orders.filter(o => o.status === "COMPLETED");
+  const activeOrders = orders.filter(o => o.status !== "COMPLETED" && o.status !== "DELIVERED");
+  const completedOrders = orders.filter(o => o.status === "COMPLETED" || o.status === "DELIVERED");
   const [payOrder, setPayOrder] = useState<Order | null>(null);
   const [reviewOrder, setReviewOrder] = useState<(Order & { items?: OrderItem[] }) | null>(null);
   const { data: existingReviews = [] } = useQuery<Review[]>({ queryKey: ["/api/reviews/public"] });
@@ -564,13 +578,21 @@ function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) 
                         )}
                       </div>
                     </div>
-                    <StatusTimeline status={order.status} />
-                    {hasDue && (
+                    <StatusTimeline status={order.status} pickupOption={(order as any).pickupOption} returnOption={(order as any).returnOption} />
+                    {(order.status === "SUBMITTED" || order.status === "PENDING") && (
+                      <div className="mt-3 flex items-center gap-2 bg-slate-50 dark:bg-slate-900/20 rounded-lg p-2.5">
+                        <Clock className="w-4 h-4 text-slate-500" />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-400">
+                          Submitted — waiting for review
+                        </span>
+                      </div>
+                    )}
+                    {(order.status === "PENDING_PAYMENT" || (hasDue && order.status !== "SUBMITTED" && order.status !== "PENDING")) && hasDue && (
                       <div className="mt-3 flex items-center justify-between bg-red-50 dark:bg-red-900/20 rounded-lg p-2.5">
                         <div className="flex items-center gap-2">
                           <AlertCircle className="w-4 h-4 text-red-500" />
                           <span className="text-xs font-medium text-red-700 dark:text-red-400">
-                            Pay before cleaning begins
+                            {order.status === "PENDING_PAYMENT" ? "Pay to begin cleaning" : "Pay before cleaning begins"}
                           </span>
                         </div>
                         <Button

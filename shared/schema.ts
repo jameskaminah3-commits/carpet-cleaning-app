@@ -6,11 +6,14 @@ import { z } from "zod";
 export const roleEnum = pgEnum("role", ["customer", "technician", "admin"]);
 
 export const orderStatusEnum = pgEnum("order_status", [
+  "SUBMITTED",
   "PENDING",
   "AWAITING_PICKUP",
+  "PENDING_PAYMENT",
   "IN_CLEANING",
   "DRYING",
   "READY",
+  "DELIVERED",
   "COMPLETED",
 ]);
 
@@ -65,7 +68,9 @@ export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   customerId: varchar("customer_id").notNull().references(() => users.id),
   technicianId: varchar("technician_id").references(() => users.id),
-  status: orderStatusEnum("status").notNull().default("PENDING"),
+  status: orderStatusEnum("status").notNull().default("SUBMITTED"),
+  pickupOption: text("pickup_option").notNull().default("customer_delivers"),
+  returnOption: text("return_option").notNull().default("customer_collects"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull().default("0"),
   depositPaid: decimal("deposit_paid", { precision: 10, scale: 2 }).notNull().default("0"),
   balanceDue: decimal("balance_due", { precision: 10, scale: 2 }).notNull().default("0"),
@@ -276,12 +281,14 @@ export const bookingSchema = z.object({
 });
 
 export const ORDER_STATUSES = [
-  { value: "PENDING", label: "Pending", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" },
-  { value: "AWAITING_PICKUP", label: "Picked Up", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300" },
+  { value: "SUBMITTED", label: "Submitted", color: "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300" },
+  { value: "AWAITING_PICKUP", label: "Awaiting Pickup", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300" },
+  { value: "PENDING_PAYMENT", label: "Pending Payment", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" },
   { value: "IN_CLEANING", label: "Cleaning", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" },
   { value: "DRYING", label: "Drying", color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300" },
   { value: "READY", label: "Ready", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
-  { value: "COMPLETED", label: "Delivered", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" },
+  { value: "DELIVERED", label: "Delivered", color: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300" },
+  { value: "COMPLETED", label: "Completed", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" },
 ] as const;
 
 export const CARPET_TYPES = [
