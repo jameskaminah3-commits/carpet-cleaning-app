@@ -167,6 +167,9 @@ export default function BookingPage() {
       return order;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/my"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
       toast({ title: "Order Submitted!", description: "Your booking has been submitted for review." });
       navigate("/customer");
     },
