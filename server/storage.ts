@@ -58,10 +58,12 @@ export interface IStorage {
 
   getDeliveries(): Promise<(Delivery & { order?: Order; technician?: User })[]>;
   getDeliveriesByOrder(orderId: string): Promise<Delivery[]>;
+  getDeliveriesByTechnician(technicianId: string): Promise<(Delivery & { order?: Order })[]>;
   createDelivery(delivery: InsertDelivery): Promise<Delivery>;
   updateDeliveryStatus(id: string, status: string): Promise<void>;
   updateDeliveryTechnician(id: string, technicianId: string): Promise<void>;
   rescheduleDelivery(id: string, date: Date, timeWindow: string): Promise<void>;
+  getTechnicians(): Promise<User[]>;
 
   getPromotions(): Promise<Promotion[]>;
   getActivePromotions(): Promise<Promotion[]>;
@@ -296,6 +298,22 @@ export class DatabaseStorage implements IStorage {
 
   async getDeliveriesByOrder(orderId: string): Promise<Delivery[]> {
     return db.select().from(deliveries).where(eq(deliveries.orderId, orderId));
+  }
+
+  async getDeliveriesByTechnician(technicianId: string): Promise<(Delivery & { order?: Order })[]> {
+    const techDeliveries = await db.select().from(deliveries)
+      .where(eq(deliveries.technicianId, technicianId))
+      .orderBy(desc(deliveries.createdAt));
+    const result: (Delivery & { order?: Order })[] = [];
+    for (const delivery of techDeliveries) {
+      const [order] = await db.select().from(orders).where(eq(orders.id, delivery.orderId));
+      result.push({ ...delivery, order });
+    }
+    return result;
+  }
+
+  async getTechnicians(): Promise<User[]> {
+    return db.select().from(users).where(eq(users.role, "technician"));
   }
 
   async createDelivery(delivery: InsertDelivery): Promise<Delivery> {

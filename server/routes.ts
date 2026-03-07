@@ -488,6 +488,11 @@ export async function registerRoutes(
     res.json(allDeliveries);
   });
 
+  app.get("/api/admin/technicians", authMiddleware, adminMiddleware, async (_req, res) => {
+    const technicians = await storage.getTechnicians();
+    res.json(technicians);
+  });
+
   app.post("/api/admin/deliveries", authMiddleware, adminMiddleware, async (req, res) => {
     try {
       const { orderId, technicianId, deliveryType, scheduledDate, scheduledTimeWindow } = req.body;
@@ -988,6 +993,23 @@ export async function registerRoutes(
     const tasks = await storage.getOrdersByTechnician(req.userId!);
     const unassigned = await storage.getUnassignedOrders();
     res.json([...tasks, ...unassigned]);
+  });
+
+  app.get("/api/technician/deliveries", authMiddleware, techMiddleware, async (req, res) => {
+    const techDeliveries = await storage.getDeliveriesByTechnician(req.userId!);
+    res.json(techDeliveries);
+  });
+
+  app.patch("/api/technician/deliveries/:id/complete", authMiddleware, techMiddleware, async (req, res) => {
+    try {
+      const techDeliveries = await storage.getDeliveriesByTechnician(req.userId!);
+      const delivery = techDeliveries.find(d => d.id === paramId(req));
+      if (!delivery) return res.status(403).json({ message: "This delivery is not assigned to you" });
+      await storage.updateDeliveryStatus(paramId(req), "completed");
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
   });
 
   app.patch("/api/technician/tasks/:id/complete", authMiddleware, techMiddleware, async (req, res) => {

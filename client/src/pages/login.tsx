@@ -7,16 +7,31 @@ import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Sparkles, ArrowLeft, Phone, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import type { User } from "@shared/schema";
 
 export default function LoginPage() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+
+  const { data: existingUser } = useQuery<User | null>({
+    queryKey: ["/api/auth/me"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
+  });
+
+  if (existingUser) {
+    const target = existingUser.role === "admin" ? "/admin" : existingUser.role === "technician" ? "/technician" : "/customer";
+    if (location !== target) {
+      window.history.replaceState(null, "", target);
+      navigate(target, { replace: true });
+    }
+  }
 
   const requestOtp = useMutation({
     mutationFn: async () => {
@@ -41,13 +56,8 @@ export default function LoginPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      if (data.user?.role === "admin") {
-        navigate("/admin");
-      } else if (data.user?.role === "technician") {
-        navigate("/technician");
-      } else {
-        navigate("/customer");
-      }
+      const target = data.user?.role === "admin" ? "/admin" : data.user?.role === "technician" ? "/technician" : "/customer";
+      navigate(target, { replace: true });
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });

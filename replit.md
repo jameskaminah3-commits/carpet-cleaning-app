@@ -97,6 +97,11 @@ Premium carpet cleaning operations platform for a Nairobi-based carpet cleaning 
 ### Technician
 - `GET /api/technician/tasks` - Get technician tasks
 - `PATCH /api/technician/tasks/:id/complete` - Complete task
+- `GET /api/technician/deliveries` - Get technician's assigned deliveries (pickup/drop-off trips with order data)
+- `PATCH /api/technician/deliveries/:id/complete` - Complete a delivery trip (ownership-verified)
+
+### Admin (additional)
+- `GET /api/admin/technicians` - Get all technician users (for assignment dropdowns)
 
 ## Seed Data
 - Admin: phone `0700000001` (Admin Kamau)

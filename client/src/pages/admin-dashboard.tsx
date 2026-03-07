@@ -285,8 +285,20 @@ function OrdersTab() {
 
 function DeliveriesTab() {
   const { toast } = useToast();
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ orderId: "", technicianId: "", deliveryType: "pickup", scheduledDate: "", scheduledTimeWindow: "", notes: "" });
+  const [viewTech, setViewTech] = useState<string | null>(null);
+
   const { data: allDeliveries = [], isLoading } = useQuery<(Delivery & { order?: Order; technician?: User })[]>({
     queryKey: ["/api/admin/deliveries"],
+  });
+
+  const { data: technicians = [] } = useQuery<User[]>({
+    queryKey: ["/api/admin/technicians"],
+  });
+
+  const { data: allOrders = [] } = useQuery<(Order & { customer?: User })[]>({
+    queryKey: ["/api/admin/orders"],
   });
 
   const updateDeliveryStatus = useMutation({
@@ -300,6 +312,38 @@ function DeliveriesTab() {
     },
   });
 
+  const assignTechnician = useMutation({
+    mutationFn: async ({ id, technicianId }: { id: string; technicianId: string }) => {
+      await apiRequest("PATCH", `/api/admin/deliveries/${id}/assign`, { technicianId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deliveries"] });
+      toast({ title: "Technician Assigned" });
+    },
+  });
+
+  const createDelivery = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/admin/deliveries", {
+        orderId: createForm.orderId,
+        technicianId: createForm.technicianId && createForm.technicianId !== "none" ? createForm.technicianId : null,
+        deliveryType: createForm.deliveryType,
+        scheduledDate: createForm.scheduledDate || null,
+        scheduledTimeWindow: createForm.scheduledTimeWindow || null,
+        notes: createForm.notes || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/deliveries"] });
+      setShowCreate(false);
+      setCreateForm({ orderId: "", technicianId: "", deliveryType: "pickup", scheduledDate: "", scheduledTimeWindow: "", notes: "" });
+      toast({ title: "Delivery Created" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
   if (isLoading) return <div className="space-y-3">{[1, 2].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>;
 
   const statusColors: Record<string, string> = {
@@ -309,8 +353,64 @@ function DeliveriesTab() {
     failed: "bg-red-100 text-red-700",
   };
 
+  const techTripCounts: Record<string, { total: number; pickup: number; return: number }> = {};
+  allDeliveries.forEach(d => {
+    if (d.technicianId && d.status === "completed") {
+      if (!techTripCounts[d.technicianId]) techTripCounts[d.technicianId] = { total: 0, pickup: 0, return: 0 };
+      techTripCounts[d.technicianId].total++;
+      if (d.deliveryType === "pickup") techTripCounts[d.technicianId].pickup++;
+      if (d.deliveryType === "return") techTripCounts[d.technicianId].return++;
+    }
+  });
+
+  const viewingTech = viewTech ? technicians.find(t => t.id === viewTech) : null;
+  const viewingTechDeliveries = viewTech ? allDeliveries.filter(d => d.technicianId === viewTech) : [];
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Deliveries</h3>
+        <Button size="sm" onClick={() => setShowCreate(true)} data-testid="button-create-delivery">
+          <Plus className="w-3 h-3 mr-1" /> New Trip
+        </Button>
+      </div>
+
+      {technicians.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Technician / Rider Trips</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {technicians.map(tech => {
+              const counts = techTripCounts[tech.id] || { total: 0, pickup: 0, return: 0 };
+              return (
+                <Card
+                  key={tech.id}
+                  className="p-3 cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => setViewTech(tech.id)}
+                  data-testid={`card-tech-trips-${tech.id}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">{tech.name || tech.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[10px]" data-testid={`badge-trips-${tech.id}`}>
+                        {counts.total} trips
+                      </Badge>
+                      <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
+                    <span>Pickups: {counts.pickup}</span>
+                    <span>Drop-offs: {counts.return}</span>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {allDeliveries.length === 0 && (
         <div className="text-center py-12">
           <Truck className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
@@ -323,14 +423,16 @@ function DeliveriesTab() {
             <div>
               <div className="flex items-center gap-2">
                 <Truck className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-semibold capitalize">{delivery.deliveryType}</span>
+                <Badge variant={delivery.deliveryType === "pickup" ? "default" : "secondary"} className="text-[10px]">
+                  {delivery.deliveryType === "pickup" ? "↑ Pickup" : "↓ Drop-off"}
+                </Badge>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[delivery.status]}`}>
                   {delivery.status.replace("_", " ")}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Order #{delivery.orderId.slice(0, 8)}
-                {delivery.technician && ` - ${delivery.technician.name}`}
+                {delivery.technician && ` — ${delivery.technician.name}`}
               </p>
             </div>
             <div className="text-right text-xs text-muted-foreground">
@@ -343,9 +445,9 @@ function DeliveriesTab() {
               {delivery.scheduledTimeWindow && <p>{delivery.scheduledTimeWindow}</p>}
             </div>
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             <Select value={delivery.status} onValueChange={v => updateDeliveryStatus.mutate({ id: delivery.id, status: v })}>
-              <SelectTrigger className="w-[130px] h-7 text-xs">
+              <SelectTrigger className="w-[130px] h-7 text-xs" data-testid={`select-delivery-status-${delivery.id}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -355,9 +457,127 @@ function DeliveriesTab() {
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
+            <Select
+              value={delivery.technicianId || "unassigned"}
+              onValueChange={v => { if (v !== "unassigned") assignTechnician.mutate({ id: delivery.id, technicianId: v }); }}
+            >
+              <SelectTrigger className="w-[150px] h-7 text-xs" data-testid={`select-delivery-tech-${delivery.id}`}>
+                <SelectValue placeholder="Assign rider" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {technicians.map(tech => (
+                  <SelectItem key={tech.id} value={tech.id}>{tech.name || tech.phone}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </Card>
       ))}
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Delivery Trip</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Order</Label>
+              <Select value={createForm.orderId} onValueChange={v => setCreateForm({ ...createForm, orderId: v })}>
+                <SelectTrigger className="h-9 text-xs" data-testid="select-create-order">
+                  <SelectValue placeholder="Select order" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allOrders.map(order => (
+                    <SelectItem key={order.id} value={order.id}>
+                      #{order.id.slice(0, 8)} — {order.customer?.name || "Customer"} (KES {parseFloat(order.totalAmount).toLocaleString()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Trip Type</Label>
+              <Select value={createForm.deliveryType} onValueChange={v => setCreateForm({ ...createForm, deliveryType: v })}>
+                <SelectTrigger className="h-9 text-xs" data-testid="select-create-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pickup">Pickup (Collect from customer)</SelectItem>
+                  <SelectItem value="return">Drop-off (Return to customer)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Assign Technician / Rider</Label>
+              <Select value={createForm.technicianId} onValueChange={v => setCreateForm({ ...createForm, technicianId: v })}>
+                <SelectTrigger className="h-9 text-xs" data-testid="select-create-tech">
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (assign later)</SelectItem>
+                  {technicians.map(tech => (
+                    <SelectItem key={tech.id} value={tech.id}>{tech.name || tech.phone}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Scheduled Date</Label>
+              <Input type="date" value={createForm.scheduledDate} onChange={e => setCreateForm({ ...createForm, scheduledDate: e.target.value })} className="h-9 text-xs" data-testid="input-create-date" />
+            </div>
+            <div>
+              <Label className="text-xs">Time Window</Label>
+              <Input placeholder="e.g. 9am - 12pm" value={createForm.scheduledTimeWindow} onChange={e => setCreateForm({ ...createForm, scheduledTimeWindow: e.target.value })} className="h-9 text-xs" data-testid="input-create-time" />
+            </div>
+            <div>
+              <Label className="text-xs">Notes</Label>
+              <Textarea placeholder="Optional notes" value={createForm.notes} onChange={e => setCreateForm({ ...createForm, notes: e.target.value })} className="text-xs min-h-[60px]" data-testid="input-create-notes" />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => createDelivery.mutate()}
+              disabled={!createForm.orderId || createDelivery.isPending}
+              data-testid="button-submit-delivery"
+            >
+              {createDelivery.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
+              Create Trip
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewTech} onOpenChange={open => !open && setViewTech(null)}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{viewingTech?.name || "Technician"} — Trip History</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {viewingTechDeliveries.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No trips assigned yet</p>
+            ) : viewingTechDeliveries.map(d => (
+              <Card key={d.id} className="p-3" data-testid={`card-tech-history-${d.id}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={d.deliveryType === "pickup" ? "default" : "secondary"} className="text-[10px]">
+                      {d.deliveryType === "pickup" ? "↑ Pick" : "↓ Drop"}
+                    </Badge>
+                    <span className="text-xs">Order #{d.orderId.slice(0, 8)}</span>
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[d.status]}`}>
+                    {d.status.replace("_", " ")}
+                  </span>
+                </div>
+                {d.completedAt && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Completed: {new Date(d.completedAt).toLocaleDateString("en-KE", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                )}
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
