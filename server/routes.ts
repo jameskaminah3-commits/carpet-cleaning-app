@@ -119,7 +119,10 @@ export async function registerRoutes(
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       await storage.createSession(user.id, token, expiresAt);
 
-      res.setHeader("Set-Cookie", `session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`);
+     res.setHeader(
+  "Set-Cookie",
+  `session_token=${token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${7 * 24 * 60 * 60}`
+);
       res.json({ success: true, user: { id: user.id, name: user.name, role: user.role, phone: user.phone, email: user.email, tag: user.tag } });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -156,7 +159,10 @@ export async function registerRoutes(
       .find((c) => c.trim().startsWith("session_token="))
       ?.split("=")[1];
     if (token) await storage.deleteSession(token);
-    res.setHeader("Set-Cookie", "session_token=; Path=/; HttpOnly; Max-Age=0");
+   res.setHeader(
+  "Set-Cookie",
+  "session_token=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0"
+);
     res.json({ success: true });
   });
 
