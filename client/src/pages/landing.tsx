@@ -976,23 +976,23 @@ export default function LandingPage() {
             >
               {[
                 {
-                  icon: CheckCircle2,
-                  label: "Returns Dry & Ready",
+                  icon: Zap,
+                  label: "Book Online in Seconds",
                   color: "text-[#5EE6A8]",
                 },
                 {
                   icon: Timer,
-                  label: "As Fast as 2 Hours",
+                  label: "Track Cleaning in Real Time",
                   color: "text-[#6ED3FF]",
                 },
                 {
-                  icon: Shield,
-                  label: "Zero Chemical Residue",
+                  icon: Wind,
+                  label: "Ready in as Little as 2 Hours",
                   color: "text-[#C8A2F8]",
                 },
                 {
-                  icon: Baby,
-                  label: "Safe for Kids & Pets",
+                  icon: Shield,
+                  label: "Secure Payment via M-Pesa",
                   color: "text-[#FFB3C6]",
                 },
               ].map((badge) => (
