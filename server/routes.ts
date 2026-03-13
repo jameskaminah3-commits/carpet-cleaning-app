@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { randomUUID, randomInt } from "crypto";
+import sharp from "sharp";
 import { loginSchema, verifyOtpSchema, ORDER_STATUSES, orders, mpesaTransactions } from "@shared/schema";
 import { initiateSTKPush, extractCallbackMetadata, type STKCallbackBody } from "./mpesa";
 
@@ -1006,8 +1007,28 @@ export async function registerRoutes(
         const uploadDir = path.join(process.cwd(), "uploads");
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
         const filePath = path.join(uploadDir, filename);
-        fs.writeFileSync(filePath, buffer);
-        res.json({ fileKey: `/uploads/${filename}`, filename });
+fs.writeFileSync(filePath, buffer);
+
+// Compress images
+if (contentType.startsWith("image/")) {
+
+  const compressedFilename = filename.replace(/\.(jpg|jpeg|png)$/i, ".webp");
+  const compressedPath = path.join(uploadDir, compressedFilename);
+
+  await sharp(filePath)
+    .resize({ width: 1600 })   // reduce large phone images
+    .webp({ quality: 80 })     // compress to modern format
+    .toFile(compressedPath);
+
+  fs.unlinkSync(filePath); // delete original
+
+  return res.json({
+    fileKey: `/uploads/${compressedFilename}`,
+    filename: compressedFilename
+  });
+}
+
+res.json({ fileKey: `/uploads/${filename}`, filename });
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
