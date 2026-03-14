@@ -111,7 +111,7 @@ function HeroBackground() {
       </video>
 
       <div className="absolute inset-0 bg-[#AED6F1]/35" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9]/60 via-[#3A86E9]/40 to-[#1a1a2e]/65" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9]/50 via-[#3A86E9]/10 to-[#1a1a2e]/15" />
 
       {sparkles.map((s, i) => (
         <motion.div
@@ -682,7 +682,49 @@ function TestimonialsCarousel() {
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const activityLocations = [
+  "Westlands",
+  "Kilimani",
+  "Karen",
+  "Lavington",
+  "Runda",
+  "Kahawa Sukari",
+  "Roysambu",
+  "Kamuru",
+  "Mwiki",
+  "Joska",
+  "Ruai",
+  "Githurai",
+  "Umoja"
+  "Thika Rd",
+  "Kahawa Wendani",
+  "Thika Town",
+  "Parklands",
+  "Kasarani",
+  "Kileleshwa",
+  "South B",
+  "CBD",
+  "Kayole",
+  "Langata",
+];
+const [carpetsCleaned, setCarpetsCleaned] = useState(2634);
+const [activityLocation, setActivityLocation] = useState(activityLocations[0]);
 
+useEffect(() => {
+  const updateActivity = () => {
+    setCarpetsCleaned((prev) => prev + Math.floor(Math.random() * 3));
+
+    const random =
+      activityLocations[Math.floor(Math.random() * activityLocations.length)];
+
+    setActivityLocation(random);
+
+    const nextDelay = Math.floor(Math.random() * 40000) + 20000; 
+    setTimeout(updateActivity, nextDelay);
+  };
+
+  updateActivity();
+}, []);
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
@@ -1015,46 +1057,62 @@ export default function LandingPage() {
             variants={stagger}
             className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center"
           >
-            {[
-              {
-                value: "2hrs",
-                label: "Fastest Turnaround",
-                color: "text-primary",
-              },
-              {
-                value: "95%",
-                label: "Water Extracted Instantly",
-                color: "text-cyan-500",
-              },
-              {
-                value: "0%",
-                label: "Chemical Residue",
-                color: "text-purple-500",
-              },
-              {
-                value: "5,000+",
-                label: "Carpets Cleaned",
-                color: "text-emerald-500",
-              },
-            ].map((item) => (
-              <motion.div
-                key={item.label}
-                variants={scaleIn}
-                className="space-y-1"
-              >
-                <p
-                  className={`text-3xl sm:text-4xl font-sans font-bold ${item.color}`}
-                  data-testid={`text-stat-${item.label.replace(/\s+/g, "-").toLowerCase()}`}
-                >
-                  {item.value}
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  {item.label}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
+{[
+  {
+    value: "2hrs",
+    label: "Fastest Turnaround",
+    color: "text-primary",
+  },
+  {
+    value: "95%",
+    label: "Water Extracted Instantly",
+    color: "text-cyan-500",
+  },
+  {
+    value: "0%",
+    label: "Chemical Residue",
+    color: "text-purple-500",
+  },
+].map((item) => (
+  <motion.div
+    key={item.label}
+    variants={scaleIn}
+    className="space-y-1"
+  >
+    <motion.p
+      initial={{ scale: 0.95 }}
+      animate={{ scale: 1 }}
+      transition={{ duration: 0.4 }}
+      className={`text-3xl sm:text-4xl font-sans font-bold ${item.color}`}
+      data-testid={`text-stat-${item.label.replace(/\s+/g, "-").toLowerCase()}`}
+    >
+      {item.value}
+    </motion.p>
+
+    <p className="text-xs sm:text-sm text-muted-foreground">
+      {item.label}
+    </p>
+  </motion.div>
+))}
+
+{/* LIVE ACTIVITY STAT */}
+<motion.div
+  variants={scaleIn}
+  className="space-y-1"
+>
+  <motion.p
+    className="text-3xl sm:text-4xl font-sans font-bold text-emerald-500"
+  >
+    {carpetsCleaned.toLocaleString()}+
+  </motion.p>
+
+  <p className="text-xs sm:text-sm text-muted-foreground">
+    Carpets sparkling soon in {activityLocation}
+  </p>
+</motion.div>
+
+</motion.div>
+</div>
       </section>
 
       <BeforeAfterGallery />
