@@ -385,6 +385,38 @@ function HomeTab({ user, orders }: { user: User; orders: (Order & { items?: Orde
 
   return (
     <div className="space-y-5">
+      <motion.div
+  initial={{ opacity: 0, y: -10 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5 }}
+  className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3 shadow-sm"
+>
+  <Sparkles className="w-5 h-5 text-amber-500 mt-0.5" />
+
+  <div className="text-xs leading-relaxed">
+    <p className="font-semibold text-amber-700">
+      Quick Payment Update
+    </p>
+
+    <p className="text-amber-700/90 mt-1">
+      We're currently enhancing our <b>M-Pesa payment experience</b> to make it even smoother.
+    </p>
+
+    <p className="mt-1">
+      Meanwhile you can complete payment via  
+      <span className="font-semibold"> M-Pesa: 0745 016 805 </span>  
+      or at our premises.
+    </p>
+
+    <a
+      href="https://wa.me/254745016805?text=Hello%20Sparkle%20n'%20Glee,%20I%20have%20completed%20my%20payment.%20Please%20confirm.%20Asante%20sana."
+      target="_blank"
+      className="inline-flex items-center gap-1 mt-2 text-green-600 font-medium hover:underline"
+    >
+      Confirm payment on WhatsApp →
+    </a>
+  </div>
+</motion.div>
       <motion.div initial="hidden" animate="visible" variants={fadeUp}>
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-5 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full -translate-y-8 translate-x-8" />
