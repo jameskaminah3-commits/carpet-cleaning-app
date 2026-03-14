@@ -689,7 +689,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 h-16">
 <div className="flex items-center cursor-pointer" onClick={() => navigate("/")}>
   <img
-    src="/logo-original.jpg"
+    src="/revised-logo.jpg"
     alt="Sparkle n' Glee"
     className="h-14 sm:h-16 w-auto"
   />
