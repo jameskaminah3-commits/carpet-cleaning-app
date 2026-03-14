@@ -686,7 +686,7 @@ export default function LandingPage() {
   return (
 <div className="flex items-center cursor-pointer" onClick={() => navigate("/")}>
   <img
-    src="/Logos.jpg"
+    src="/logo-original.jpg"
     alt="Sparkle n' Glee"
     className="h-14 sm:h-16 w-auto"
   />
