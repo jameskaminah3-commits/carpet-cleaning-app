@@ -32,7 +32,7 @@ import {
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { Review, User, Media } from "@shared/schema";
-import logoClear from "@assets/mascot-logo-clear.png";
+import logoClear from "@assets/Logos.png";
 import imgSisalJute from "@assets/Sisal_Jute_1771953293164.jpg";
 import imgPersian from "@assets/persian_oriental_1771953293167.jpg";
 import imgFrieze from "@assets/frieze_carpet_1771953293167.jpg";
@@ -1501,68 +1501,104 @@ useEffect(() => {
 
       <footer className="border-t py-12 bg-gradient-to-b from-[#EBF3FF] to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid sm:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <img
-                  src={logoClear}
-                  alt="Sparkle n' Glee"
-                  className="h-12 w-auto drop-shadow-sm"
-                />
-                <span className="font-bold text-primary">Sparkle n' Glee</span>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Nairobi's favourite carpet cleaning service. Sparkling,
-                spotless, fast.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold text-sm mb-3 text-foreground">
-                Contact
-              </p>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <a
-                  href={`tel:${PHONE_NUMBER}`}
-                  className="flex items-center gap-2 hover:text-primary transition-colors"
-                >
-                  <Phone className="w-4 h-4" /> {PHONE_NUMBER}
-                </a>
-                <a
-                  href={WHATSAPP_LINK}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 hover:text-green-500 transition-colors"
-                >
-                  <MessageCircle className="w-4 h-4" /> WhatsApp Chat
-                </a>
-              </div>
-            </div>
-            <div>
-              <p className="font-semibold text-sm mb-3 text-foreground">
-                Quick Links
-              </p>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <a
-                  href="#our-process"
-                  className="block hover:text-primary transition-colors"
-                >
-                  Our Process
-                </a>
-                <a
-                  href="#how-it-works"
-                  className="block hover:text-primary transition-colors"
-                >
-                  How It Works
-                </a>
-                <button
-                  onClick={() => navigate("/book")}
-                  className="block hover:text-primary transition-colors"
-                >
-                  Get Free Estimate
-                </button>
-              </div>
-            </div>
-          </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
+
+{/* BRAND */}
+<div>
+  <div className="flex items-center gap-2 mb-4">
+    <img
+      src={logoClear}
+      alt="Sparkle n' Glee"
+      className="h-12 w-auto drop-shadow-sm"
+    />
+  </div>
+
+  <p className="text-sm text-muted-foreground leading-relaxed">
+    Professional carpet cleaning across Nairobi & Kiambu.
+    Powerful stain & odor removal. Fast drying. Family-safe cleaning.
+  </p>
+
+  <p className="text-xs text-muted-foreground mt-3">
+    Trusted by homes across Nairobi & Kiambu.
+  </p>
+</div>
+
+{/* CONTACT */}
+<div>
+  <p className="font-semibold text-sm mb-3 text-foreground">
+    Contact
+  </p>
+
+  <div className="space-y-2 text-sm text-muted-foreground">
+    <a
+      href={`tel:${PHONE_NUMBER}`}
+      className="flex items-center gap-2 hover:text-primary transition-colors"
+    >
+      <Phone className="w-4 h-4" /> {PHONE_NUMBER}
+    </a>
+
+    <a
+      href={WHATSAPP_LINK}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 hover:text-green-500 transition-colors"
+    >
+      <MessageCircle className="w-4 h-4" /> WhatsApp Chat
+    </a>
+
+    <p className="text-xs text-muted-foreground mt-2">
+      Serving Nairobi & Kiambu Areas
+    </p>
+  </div>
+</div>
+
+{/* COMPANY */}
+<div>
+  <p className="font-semibold text-sm mb-3 text-foreground">
+    Company
+  </p>
+
+  <div className="space-y-2 text-sm text-muted-foreground">
+    <a href="#" className="block hover:text-primary transition-colors">
+      About Us
+    </a>
+
+    <a href="#" className="block hover:text-primary transition-colors">
+      FAQs
+    </a>
+
+    <a href="#" className="block hover:text-primary transition-colors">
+      Privacy Policy
+    </a>
+
+    <a href="#" className="block hover:text-primary transition-colors">
+      Booking Terms
+    </a>
+  </div>
+</div>
+
+{/* SOCIAL */}
+<div>
+  <p className="font-semibold text-sm mb-3 text-foreground">
+    Follow Us
+  </p>
+
+  <div className="space-y-2 text-sm text-muted-foreground">
+    <a href="https://instagram.com" target="_blank" className="block hover:text-primary">
+      Instagram
+    </a>
+
+    <a href="https://facebook.com" target="_blank" className="block hover:text-primary">
+      Facebook
+    </a>
+
+    <a href="https://tiktok.com" target="_blank" className="block hover:text-primary">
+      TikTok
+    </a>
+  </div>
+</div>
+
+</div>
           <div className="mt-8 pt-8 border-t border-border text-center">
             <p className="text-sm text-muted-foreground">
               &copy; 2026 Sparkle n' Glee. All rights reserved. Nairobi, Kenya.
