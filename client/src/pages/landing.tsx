@@ -687,18 +687,12 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 h-16">
-<div className="flex items-center gap-2">
+<div className="flex items-center cursor-pointer" onClick={() => navigate("/")}>
   <img
-    src="/logo-original.jpg"
+    src="/Logos.jpg"
     alt="Sparkle n' Glee"
-    className="h-9 w-auto rounded-lg"
+    className="h-14 sm:h-16 w-auto"
   />
-  <span
-    className="text-lg sm:text-xl font-bold text-primary"
-    data-testid="text-brand-name"
-  >
-    Sparkle n' Glee
-  </span>
 </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <a
