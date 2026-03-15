@@ -234,23 +234,23 @@ const testimonials = [
 const steps = [
   {
     step: "1",
-    title: "Get Free Estimate",
-    desc: "Tell us your carpet size and type. If you want pickup and delivery, tell us your location",
+    title: "Get a Free Quote",
+    desc: "Start by requesting an instant estimate for your carpet cleaning. No account required.",
   },
   {
     step: "2",
-    title: "We Pick Up or you drop it at our premises",
-    desc: "Our team collects your carpets from your doorstep at your preferred time, or you can drop it at our premises",
+    title: "Confirm Your Booking",
+    desc: "Create an account or sign in to confirm your service and schedule pickup or drop-off.",
   },
   {
     step: "3",
-    title: "Deep Extraction",
-    desc: "Industrial-grade cleaning with our proprietary vortex extraction technology",
+    title: "Deep Professional Cleaning",
+    desc: "We use our advanced automatic deep-extraction machine with powerful vortex technology to remove dirt, stains, and odors from deep within your carpet fibers.",
   },
   {
     step: "4",
-    title: "Ready to Use",
-    desc: "Carpets returned dry, fresh, and ready to walk on — as fast as 2 hours",
+    title: "Track & Receive Your Carpet",
+    desc: "Follow your order progress in real time through your dashboard and receive your carpet sparkling clean, fresh and ready to use.",
   },
 ];
 
@@ -409,7 +409,7 @@ function BeforeAfterGallery() {
 
           <div className="text-center mt-10 px-4">
             <p className="text-muted-foreground text-xs">
-              Trusted by 5,000+ Nairobi homes and offices
+              Trusted by 2,000+ Nairobi & Kiambu homes and offices
             </p>
           </div>
         </div>
@@ -997,7 +997,7 @@ useEffect(() => {
               className="mt-5 text-base sm:text-lg text-white/85 max-w-lg leading-relaxed"
               data-testid="text-hero-subtitle"
             >
-              We deep-clean your carpets, remove stubborn dirt and allergens —
+              We deep-clean your carpets, remove stubborn dirt and odor —
               and return them fresh, dry and ready to enjoy in as little as{" "}
               <strong className="text-white font-semibold">2 hours</strong>.
             </motion.p>
@@ -1123,7 +1123,7 @@ useEffect(() => {
   </motion.p>
 
   <p className="text-xs sm:text-sm text-muted-foreground">
-    Carpets sparkling soon in {activityLocation}
+    Carpet sparkling soon in {activityLocation}
   </p>
 </motion.div>
 
@@ -1195,13 +1195,13 @@ useEffect(() => {
               {
                 name: "Berber Carpet",
                 img: imgBerber,
-                desc: "Pulls embedded grime from loops — stays springy & clean.",
+                desc: "Pulls embedded stains from loops — stays springy & clean.",
                 color: "from-emerald-50 to-teal-50 border-emerald-100",
               },
               {
                 name: "Frieze Carpet",
                 img: imgFrieze,
-                desc: "Twisted fibers refreshed — extracts deep dirt, restores bounce.",
+                desc: "Twisted fibers refreshed — extracts deep stains, restores bounce.",
                 color: "from-sky-50 to-indigo-50 border-sky-100",
               },
               {
@@ -1296,9 +1296,8 @@ useEffect(() => {
               variants={fadeUp}
               className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg"
             >
-              No damp carpets, no chemical residue, no waiting around. Just a
-              deep, thorough clean that's safe for your family and ready when
-              you are.
+              No damp carpets, no bad smell on your carpets, no waiting around. Just a
+              deep, thorough clean that's leaves your home or office carpets sparkling and fresh.
             </motion.p>
           </motion.div>
 
@@ -1399,8 +1398,7 @@ useEffect(() => {
               How It Works
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              From estimate to delivery, we make the entire process seamless. No
-              login required to get started.
+              Get an instant estimate, confirm your booking, and track the entire cleaning process from your dashboard.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1458,8 +1456,8 @@ useEffect(() => {
               variants={fadeUp}
               className="text-muted-foreground mb-8 max-w-xl mx-auto text-lg"
             >
-              Get your free estimate in under 2 minutes. No login required —
-              just tell us about your carpets and we'll handle the rest.
+              Get your free estimate in under 2 minutes — no login required.
+              Sign in only when you're ready to confirm your booking.
             </motion.p>
             <motion.div
               variants={fadeUp}
