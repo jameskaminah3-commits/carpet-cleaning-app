@@ -7,6 +7,10 @@ import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import BookingPage from "@/pages/booking";
+import About from "./pages/about";
+import FAQ from "./pages/faq";
+import Privacy from "./pages/privacy";
+import Terms from "./pages/terms";
 import CustomerDashboard from "@/pages/customer-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import TechnicianDashboard from "@/pages/technician-dashboard";
@@ -18,6 +22,11 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/book" component={BookingPage} />
+      
+      <Route path="/about" component={About} />
+      <Route path="/faq" component={FAQ} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       <Route path="/customer">
         <ProtectedRoute allowedRoles={["customer"]}>
           <CustomerDashboard />
