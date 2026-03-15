@@ -6,6 +6,7 @@ import {
   AnimatePresence,
 } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -43,7 +44,7 @@ import imgFluffy from "@assets/fluffy_carpet_1771953293170.jpeg";
 import imgSilk from "@assets/silk_carpets_1771953315954.webp";
 
 const PHONE_NUMBER = "0745016805";
-const WHATSAPP_LINK = `https://wa.me/254745016805?text=${encodeURIComponent("Hi Sparkle n' Glee! I'd like to get a free estimate for carpet cleaning.")}`;
+const WHATSAPP_LINK = `https://wa.me/254745016805?text=${encodeURIComponent("Hi Sparkle n' Glee! I'd like to get an estimate for cleaning my carpet.")}`;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -156,7 +157,7 @@ const technologies = [
     title: "Super Strong Cleaning for even the Tougher Dirt",
     subtitle: "10× More Powerful",
     description:
-      "Our machines are 10× stronger than your home vacuum. They suck out deep-down red soil, dust, and grime that normal cleaners miss — your carpet looks and feels brand new.",
+      "Our machines are 10× stronger than your home vacuum. They clean out sturbon stains, and remove odor that normal cleaners miss, making your carpet looks and smell brand new.",
     stat: "10x",
     statLabel: "More Powerful Than Home Vacuums",
     icon: Zap,
@@ -169,7 +170,7 @@ const technologies = [
     title: "Cleans Right Down to the Roots",
     subtitle: "Every Fibre, Top to Bottom",
     description:
-      "We don't just clean the top — we get to the bottom of every fibre, pulling out hidden dirt, sand, and allergens so your carpet stays fresh longer.",
+      "We don't just clean the top — we get to the bottom of every fibre, pulling out hidden dirt, stains, and odors so your carpet stays fresh longer.",
     stat: "100%",
     statLabel: "Fiber Depth Penetration",
     icon: Bug,
@@ -193,13 +194,13 @@ const technologies = [
 
 const testimonials = [
   {
-    name: "Sarah M.",
+    name: "Mishi B.",
     location: "Karen, Nairobi",
     text: "I was amazed — my carpet was completely dry and ready to use the same day! No damp smell at all. The kids were playing on it within hours.",
     rating: 5,
   },
   {
-    name: "James K.",
+    name: "Kamaa K.",
     location: "Westlands, Nairobi",
     text: "Living near a construction site, the red soil was embedded deep in my Persian rug. Sparkle n' Glee's deep extraction brought back colors I'd forgotten existed.",
     rating: 5,
@@ -224,7 +225,7 @@ const testimonials = [
   },
   {
     name: "David M.",
-    location: "Kileleshwa, Nairobi",
+    location: "Thika, Kiambu",
     text: "Fast pickup, same-day cleaning, and my shag carpet came back fluffier than ever. The pickup and delivery service is incredibly convenient.",
     rating: 5,
   },
@@ -234,12 +235,12 @@ const steps = [
   {
     step: "1",
     title: "Get Free Estimate",
-    desc: "Tell us your carpet type and dimensions — no login needed, no obligations",
+    desc: "Tell us your carpet size and type. If you want pickup and delivery, tell us your location",
   },
   {
     step: "2",
-    title: "We Pick Up",
-    desc: "Our team collects your carpets from your doorstep at your preferred time",
+    title: "We Pick Up or you drop it at our premises",
+    desc: "Our team collects your carpets from your doorstep at your preferred time, or you can drop it at our premises",
   },
   {
     step: "3",
@@ -1559,21 +1560,23 @@ useEffect(() => {
   </p>
 
   <div className="space-y-2 text-sm text-muted-foreground">
-    <a href="#" className="block hover:text-primary transition-colors">
+
+    <Link href="/about" className="block hover:text-primary transition-colors">
       About Us
-    </a>
+    </Link>
 
-    <a href="#" className="block hover:text-primary transition-colors">
+    <Link href="/faq" className="block hover:text-primary transition-colors">
       FAQs
-    </a>
+    </Link>
 
-    <a href="#" className="block hover:text-primary transition-colors">
+    <Link href="/privacy" className="block hover:text-primary transition-colors">
       Privacy Policy
-    </a>
+    </Link>
 
-    <a href="#" className="block hover:text-primary transition-colors">
+    <Link href="/terms" className="block hover:text-primary transition-colors">
       Booking Terms
-    </a>
+    </Link>
+
   </div>
 </div>
 
