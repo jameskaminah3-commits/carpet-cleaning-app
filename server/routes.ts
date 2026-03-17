@@ -1,7 +1,10 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import rateLimit from "express-rate-limit";
 import { db } from "./db";
+import { sendOtpEmail } from "./email";
+import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { randomUUID, randomInt } from "crypto";
 import sharp from "sharp";
@@ -9,6 +12,13 @@ import { loginSchema, verifyOtpSchema, ORDER_STATUSES, orders, mpesaTransactions
 import { initiateSTKPush, extractCallbackMetadata, type STKCallbackBody } from "./mpesa";
 
 const paramId = (req: Request) => req.params.id as string;
+const otpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5, // max 5 OTP requests
+  message: {
+    message: "Too many OTP requests. Please try again later.",
+  },
+});
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -129,7 +139,221 @@ export async function registerRoutes(
       res.status(500).json({ message: err.message });
     }
   });
+  app.post("/api/auth/verify-email", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
 
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP required" });
+    }
+
+    const user = await storage.getUserByEmail(email);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.otpCode !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.otpExpiry && new Date() > user.otpExpiry) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    await storage.verifyUserEmail(user.id);
+
+    await storage.clearUserOtp(user.id);
+
+    res.json({ success: true });
+
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+ app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+
+    if (!identifier || !password) {
+      return res.status(400).json({ message: "Email/Phone and password required" });
+    }
+
+    let user;
+
+    if (identifier.includes("@")) {
+      user = await storage.getUserByEmail(identifier);
+    } else {
+      user = await storage.getUserByPhone(identifier);
+    }
+
+    if (!user || !user.passwordHash) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+      return res.status(403).json({
+        message: "Account temporily locked. Try again later.",
+      });
+    }
+
+    const match = await bcrypt.compare(password, user.passwordHash);
+
+    if (!match) {
+      const attempts = (user.failedLoginAttempts || 0) + 1;
+
+      if (attempts >= 7) {
+        await storage.updateUserLoginLock(
+          user.id,
+          0,
+          new Date(Date.now() + 15 * 60 * 1000)
+        );
+      } else {
+        await storage.updateUserLoginLock(user.id, attempts, null);
+      }
+
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    await storage.updateUserLoginLock(user.id, 0, null);
+
+    const token = randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await storage.createSession(user.id, token, expiresAt);
+
+res.setHeader(
+  "Set-Cookie",
+  `session_token=${token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${7 * 24 * 60 * 60}`
+);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        phone: user.phone,
+        email: user.email,
+      },
+    });
+
+  } catch (err:any) {
+    res.status(500).json({ message: err.message });
+  }
+}); 
+  app.post("/api/auth/register", otpLimiter, async (req, res) => {
+  try {
+    const { name, phone, email, password } = req.body;
+
+    if (!name || !phone || !email || !password) {
+      return res.status(400).json({
+        message: "Name, phone, email and password are required",
+      });
+    }
+
+    const existingEmail = await storage.getUserByEmail(email);
+    const existingPhone = await storage.getUserByPhone(phone);
+
+    if (existingEmail) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
+
+    if (existingPhone) {
+      return res.status(400).json({ message: "Phone already registered" });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    const user = await storage.createUser({
+      name,
+      phone,
+      email,
+      passwordHash: hash,
+      role: "customer",
+    });
+
+    /* create session */
+    const token = randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await storage.createSession(user.id, token, expiresAt);
+
+    res.setHeader(
+      "Set-Cookie",
+      `session_token=${token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${7 * 24 * 60 * 60}`
+    );
+
+    /* 🔹 GENERATE EMAIL OTP */
+    const otp = String(randomInt(100000, 999999));
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    await storage.updateUserOtp(user.id, otp, expiry);
+
+    /* 🔹 SEND EMAIL IN BACKGROUND */
+    sendOtpEmail(email, otp, "verify").catch(console.error);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    });
+
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+  app.post("/api/auth/forgot-password", otpLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await storage.getUserByEmail(email);
+
+    if (!user) {
+      return res.json({ success: true });
+    }
+
+    const otp = String(randomInt(100000, 999999));
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    await storage.updateUserOtp(user.id, otp, expiry);
+
+    await sendOtpEmail(email, otp, "reset").catch(console.error);
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+ app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { email, otp, password } = req.body;
+
+    const user = await storage.getUserByEmail(email);
+
+    if (!user || user.otpCode !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.otpExpiry && new Date() > user.otpExpiry) {
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    await storage.updateUserPassword(user.id, hash);
+    await storage.clearUserOtp(user.id);
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+}); 
   app.get("/api/auth/me", authMiddleware, async (req, res) => {
     const user = await storage.getUser(req.userId!);
     if (!user) return res.status(404).json({ message: "User not found" });
