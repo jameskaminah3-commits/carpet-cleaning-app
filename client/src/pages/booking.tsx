@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -56,6 +56,29 @@ export default function BookingPage() {
   const [couponCode, setCouponCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<Promotion | null>(null);
   const [couponError, setCouponError] = useState("");
+
+  useEffect(() => {
+  const saved = localStorage.getItem("pendingBooking");
+
+  if (saved) {
+    const data = JSON.parse(saved);
+
+    if (data.items) setItems(data.items);
+    if (data.pickupOption) setPickupOption(data.pickupOption);
+    if (data.returnOption) setReturnOption(data.returnOption);
+    if (data.selectedZone) setSelectedZone(data.selectedZone);
+    if (data.address) setAddress(data.address);
+    if (data.locationName) setLocationName(data.locationName);
+    if (data.notes) setNotes(data.notes);
+
+    localStorage.removeItem("pendingBooking");
+
+    toast({
+      title: "Welcome back 👋",
+      description: "Your booking details have been restored. You can now submit.",
+    });
+  }
+}, []);
 
   const { data: user } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
@@ -173,18 +196,35 @@ export default function BookingPage() {
       toast({ title: "Order Submitted!", description: "Your booking has been submitted for review." });
       navigate("/customer");
     },
-    onError: (err: Error) => {
-      if (err.message.includes("401") || err.message.includes("Unauthorized")) {
-        toast({
-          title: "Sign In Required",
-          description: "Please sign in to submit your order. Your estimate has been saved.",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
-      toast({ title: "Error", description: err.message, variant: "destructive" });
-    },
+onError: (err: Error) => {
+  if (err.message.includes("401") || err.message.includes("Unauthorized")) {
+
+    // ✅ SAVE FORM DATA BEFORE REDIRECT
+    localStorage.setItem(
+  "pendingBooking",
+  JSON.stringify({
+    items,
+    pickupOption,
+    returnOption,
+    selectedZone,
+    address,
+    locationName,
+    notes,
+  })
+);
+
+    toast({
+      title: "Sign In Required",
+      description: "Please sign in to submit your order. Your estimate has been saved.",
+      variant: "destructive",
+    });
+
+    navigate("/login?redirect=/booking");
+    return;
+  }
+
+  toast({ title: "Error", description: err.message, variant: "destructive" });
+},
   });
 
   const updateItem = (index: number, field: keyof CarpetItem, value: string) => {
@@ -753,7 +793,7 @@ export default function BookingPage() {
 
                 {!user && (
                   <Card className="p-4 border-primary/30 bg-primary/5" data-testid="card-login-notice">
-                    <p className="text-sm font-medium">You'll need to sign in to submit this order.</p>
+                    <p className="text-sm font-medium">Sign in to continue.</p>
                     <p className="text-xs text-muted-foreground mt-1">Don't worry — your estimate details will be ready for you after login.</p>
                   </Card>
                 )}
@@ -778,14 +818,28 @@ export default function BookingPage() {
             ) : (
               <Button
                 onClick={() => {
-                  if (!user) {
-                    toast({
-                      title: "Sign In Required",
-                      description: "Please sign in to submit your booking.",
-                    });
-                    navigate("/login");
-                    return;
-                  }
+if (!user) {
+  localStorage.setItem(
+    "pendingBooking",
+    JSON.stringify({
+      items,
+      pickupOption,
+      returnOption,
+      selectedZone,
+      address,
+      locationName,
+      notes,
+    })
+  );
+
+  toast({
+    title: "Sign In Required",
+    description: "Please sign in to complete your booking. Your details have been saved.",
+  });
+
+  navigate("/login?redirect=/book");
+  return;
+}
                   createOrder.mutate();
                 }}
                 disabled={createOrder.isPending}
