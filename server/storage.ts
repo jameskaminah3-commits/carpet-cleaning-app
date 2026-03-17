@@ -22,9 +22,11 @@ import {
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByPhone(phone: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserOtp(id: string, otp: string, expiry: Date): Promise<void>;
   clearUserOtp(id: string): Promise<void>;
+  updateUserPassword(id: string, passwordHash: string): Promise<void>;
   updateUserProfile(id: string, data: Partial<{ name: string; email: string; phone: string }>): Promise<User>;
   updateUserTag(id: string, tag: string | null): Promise<void>;
   updateUserActive(id: string, isActive: boolean): Promise<void>;
@@ -119,7 +121,10 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.phone, phone));
     return user;
   }
-
+async getUserByEmail(email: string): Promise<User | undefined> {
+  const [user] = await db.select().from(users).where(eq(users.email, email));
+  return user;
+}
   async createUser(user: InsertUser): Promise<User> {
     const [created] = await db.insert(users).values(user).returning();
     return created;
@@ -132,7 +137,24 @@ export class DatabaseStorage implements IStorage {
   async clearUserOtp(id: string): Promise<void> {
     await db.update(users).set({ otpCode: null, otpExpiry: null }).where(eq(users.id, id));
   }
-
+  async updateUserPassword(id: string, passwordHash: string): Promise<void> {
+  await db.update(users)
+    .set({ passwordHash })
+    .where(eq(users.id, id));
+  }
+  async updateUserLoginLock(
+  userId: string,
+  attempts: number,
+  lockUntil: Date | null
+) {
+  await db
+    .update(users)
+    .set({
+      failedLoginAttempts: attempts,
+      lockUntil: lockUntil,
+    })
+    .where(eq(users.id, userId));
+}
   async updateUserProfile(id: string, data: Partial<{ name: string; email: string; phone: string }>): Promise<User> {
     const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning();
     return updated;
@@ -141,7 +163,12 @@ export class DatabaseStorage implements IStorage {
   async updateUserTag(id: string, tag: string | null): Promise<void> {
     await db.update(users).set({ tag: tag as any }).where(eq(users.id, id));
   }
-
+async verifyUserEmail(userId: string) {
+  await db
+    .update(users)
+    .set({ emailVerified: true })
+    .where(eq(users.id, userId));
+}
   async updateUserActive(id: string, isActive: boolean): Promise<void> {
     await db.update(users).set({ isActive }).where(eq(users.id, id));
   }
