@@ -256,9 +256,9 @@ const steps = [
 ];
 
 function BeforeAfterGallery() {
-  const { data: publicMedia = [] } = useQuery<Media[]>({
-    queryKey: ["/api/media/public"],
-  });
+const { data: publicMedia = [], isLoading } = useQuery<Media[]>({
+  queryKey: ["/api/media/public"],
+});
   const [lightbox, setLightbox] = useState<{
     src: string;
     isVideo: boolean;
@@ -300,8 +300,13 @@ function BeforeAfterGallery() {
     [slides.length],
   );
 
-  if (slides.length === 0) return null;
-
+   if (isLoading) {
+  return (
+    <section className="py-20 text-center">
+      <p className="text-muted-foreground">Loading gallery...</p>
+    </section>
+  );
+}
   const trackItems =
     slides.length >= 3 ? [...slides, ...slides, ...slides] : [...slides];
 
