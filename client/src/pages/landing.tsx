@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FloatingPromoBar } from "@/components/promo-display";
 import {
   Sparkles,
   Phone,
@@ -112,7 +113,7 @@ function HeroBackground() {
       </video>
 
       <div className="absolute inset-0 bg-[#AED6F1]/35" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9]/50 via-[#3A86E9]/10 to-[#1a1a2e]/15" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#3A86E9]/40 via-[#3A86E9]/10 to-[#1a1a2e]/15" />
 
       {sparkles.map((s, i) => (
         <motion.div
@@ -234,13 +235,13 @@ const testimonials = [
 const steps = [
   {
     step: "1",
-    title: "Get a Free Quote",
-    desc: "Start by requesting an instant estimate for your carpet cleaning. No account required.",
+    title: "Get Free Quote & Confirm Booking",
+    desc: "Tell us your carpet type & dimensions, get an instant cost estimate no login needed.Create an account or sign in to confirm your service and schedule pickup or drop-off.",
   },
   {
     step: "2",
-    title: "Confirm Your Booking",
-    desc: "Create an account or sign in to confirm your service and schedule pickup or drop-off.",
+    title: "We Pick Up",
+    desc: "Our team collects your carpets from your doorstep at your preferred time.",
   },
   {
     step: "3",
@@ -250,7 +251,7 @@ const steps = [
   {
     step: "4",
     title: "Track & Receive Your Carpet",
-    desc: "Follow your order progress in real time through your dashboard and receive your carpet sparkling clean, fresh and ready to use.",
+    desc:  "Follow your order progress in real time on your accound & receive your carpet sparkling clean, fresh and ready to use.",
   },
 ];
 
@@ -683,6 +684,19 @@ function TestimonialsCarousel() {
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+      // ✅ ADD THIS BLOCK HERE
+  const { data: promos = [] } = useQuery<any[]>({
+  queryKey: ["/api/promotions/public"],
+  queryFn: async () => {
+    const res = await fetch("/api/promotions/public");
+    if (!res.ok) throw new Error("Failed to fetch promos");
+    return res.json();
+  },
+});
+    const publicPromos = promos.filter(
+    (p) => p.isActive && (!p.targetTag || p.targetTag === "all")
+  );
+  const featuredPromo = publicPromos[0];
   const activityLocations = [
   "Westlands",
   "Kilimani",
@@ -743,6 +757,12 @@ useEffect(() => {
 }, []);
   return (
     <div className="min-h-screen bg-background overflow-hidden">
+          {featuredPromo && (
+      <FloatingPromoBar
+        promo={featuredPromo}
+        onAction={() => navigate("/book")}
+      />
+    )}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 h-16">
 <div className="flex items-center cursor-pointer" onClick={() => navigate("/")}>
