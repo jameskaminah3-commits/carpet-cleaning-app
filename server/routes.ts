@@ -20,6 +20,8 @@ const otpLimiter = rateLimit({
   },
 });
 
+const isPromoForAllCustomers = (targetTag: string | null | undefined) =>
+  !targetTag || targetTag === "all";
 declare module "express-serve-static-core" {
   interface Request {
     userId?: string;
@@ -456,7 +458,7 @@ res.setHeader(
           if ((promo.minOrders ?? 0) > 0 && (user?.totalOrders ?? 0) < (promo.minOrders ?? 0)) {
             return res.status(400).json({ message: `You need at least ${promo.minOrders} orders to use this promotion` });
           }
-          if (promo.targetTag && user?.tag !== promo.targetTag) {
+       if (!isPromoForAllCustomers(promo.targetTag) && user?.tag !== promo.targetTag) {
             return res.status(400).json({ message: `This promotion is for ${promo.targetTag} customers only` });
           }
           validPromoId = promo.id;
@@ -573,6 +575,12 @@ res.setHeader(
       if (promo.isVipOnly) {
         const user = await storage.getUser(req.userId!);
         if (!user || user.tag !== "VIP") return res.status(403).json({ message: "This coupon is for VIP customers only" });
+      }
+            if (!isPromoForAllCustomers(promo.targetTag)) {
+        const user = await storage.getUser(req.userId!);
+        if (!user || user.tag !== promo.targetTag) {
+          return res.status(403).json({ message: `This coupon is for ${promo.targetTag} customers only` });
+        }
       }
       res.json(promo);
     } catch (err: any) {
@@ -826,7 +834,7 @@ res.setHeader(
         expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
         targetUserId: req.body.targetUserId || null,
         minOrders: req.body.minOrders || 0,
-        targetTag: req.body.targetTag || null,
+        targetTag: !req.body.targetTag || req.body.targetTag === "all" ? null : req.body.targetTag,
       });
       res.json(promo);
     } catch (err: any) {
@@ -837,8 +845,22 @@ res.setHeader(
   app.delete("/api/admin/promotions/:id", authMiddleware, adminMiddleware, async (req, res) => {
     await storage.deletePromotion(paramId(req));
     res.json({ success: true });
+   });
+app.get("/api/promotions/public", async (_req, res) => {
+  const promos = await storage.getPromotions();
+
+  const publicPromos = promos.filter(p => {
+    return (
+      p.isActive &&
+      !p.isVipOnly &&
+      !p.targetUserId &&
+      (p.minOrders ?? 0) === 0 &&
+      isPromoForAllCustomers(p.targetTag)
+    );
   });
 
+  res.json(publicPromos);
+});
   // Notification routes
   app.get("/api/notifications", authMiddleware, async (req, res) => {
     try {
