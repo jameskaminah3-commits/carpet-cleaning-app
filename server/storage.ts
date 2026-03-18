@@ -26,6 +26,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserOtp(id: string, otp: string, expiry: Date): Promise<void>;
   clearUserOtp(id: string): Promise<void>;
+  verifyUserEmail(id: string): Promise<void>;
   updateUserPassword(id: string, passwordHash: string): Promise<void>;
   updateUserProfile(id: string, data: Partial<{ name: string; email: string; phone: string }>): Promise<User>;
   updateUserTag(id: string, tag: string | null): Promise<void>;
@@ -112,6 +113,10 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private isPromoForAllCustomers(targetTag: string | null | undefined) {
+    return !targetTag || targetTag === "all";
+  }
+  
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -137,6 +142,11 @@ async getUserByEmail(email: string): Promise<User | undefined> {
   async clearUserOtp(id: string): Promise<void> {
     await db.update(users).set({ otpCode: null, otpExpiry: null }).where(eq(users.id, id));
   }
+
+    async verifyUserEmail(id: string): Promise<void> {
+    await db.update(users).set({ emailVerified: true }).where(eq(users.id, id));
+  }
+  
   async updateUserPassword(id: string, passwordHash: string): Promise<void> {
   await db.update(users)
     .set({ passwordHash })
@@ -163,12 +173,7 @@ async getUserByEmail(email: string): Promise<User | undefined> {
   async updateUserTag(id: string, tag: string | null): Promise<void> {
     await db.update(users).set({ tag: tag as any }).where(eq(users.id, id));
   }
-async verifyUserEmail(userId: string) {
-  await db
-    .update(users)
-    .set({ emailVerified: true })
-    .where(eq(users.id, userId));
-}
+
   async updateUserActive(id: string, isActive: boolean): Promise<void> {
     await db.update(users).set({ isActive }).where(eq(users.id, id));
   }
@@ -378,7 +383,7 @@ async verifyUserEmail(userId: string) {
       if (p.expiresAt && new Date() > p.expiresAt) return false;
       if (p.targetUserId && p.targetUserId !== userId) return false;
       if (p.minOrders > 0 && user.totalOrders < p.minOrders) return false;
-      if (p.targetTag && p.targetTag !== user.tag) return false;
+      if (!this.isPromoForAllCustomers(p.targetTag) && p.targetTag !== user.tag) return false;
       if (p.isVipOnly && user.tag !== "VIP") return false;
       return true;
     });
