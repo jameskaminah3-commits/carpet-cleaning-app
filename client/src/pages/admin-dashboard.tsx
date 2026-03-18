@@ -716,6 +716,7 @@ function UsersTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No Tag</SelectItem>
+                <SelectItem value="all">All Customers (Public)</SelectItem>
                 <SelectItem value="VIP">VIP</SelectItem>
                 <SelectItem value="Frequent">Frequent</SelectItem>
                 <SelectItem value="Corporate">Corporate</SelectItem>
@@ -1034,7 +1035,17 @@ function PromotionsTab() {
           </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-xs cursor-pointer">
-              <input type="checkbox" checked={form.isVipOnly} onChange={e => setForm({ ...form, isVipOnly: e.target.checked })} className="rounded" />
+                           <input
+  type="checkbox"
+  checked={form.targetTag === "VIP"}
+  onChange={e =>
+    setForm({
+      ...form,
+      targetTag: e.target.checked ? "VIP" : "",
+      isVipOnly: e.target.checked,
+    })
+  }
+/>
               VIP Only
             </label>
             <label className="flex items-center gap-2 text-xs cursor-pointer">
