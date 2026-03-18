@@ -34,7 +34,7 @@ export function FloatingPromoBar({
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: "easeOut" }}
-      className="relative z-[60] w-full border-b border-sky-200/70 bg-white/95 backdrop-blur-xl"
+      className="relative z-40 w-full border-b border-sky-200/70 bg-white/95 backdrop-blur-xl"
       data-testid="floating-promo-bar"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.14),_transparent_28%)]" />
