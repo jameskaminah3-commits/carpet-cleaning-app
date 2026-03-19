@@ -30,7 +30,9 @@ function AdminNotificationsPanel({ open, onClose }: { open: boolean; onClose: ()
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
     enabled: open,
+    refetchInterval: open ? 30000 : false,
   });
+  const unreadNotifications = notifications.filter((notif) => !notif.isRead);
 
   const markRead = useMutation({
     mutationFn: (id: string) => apiRequest("PATCH", `/api/notifications/${id}/read`),
@@ -48,6 +50,15 @@ function AdminNotificationsPanel({ open, onClose }: { open: boolean; onClose: ()
         <DialogHeader>
           <DialogTitle className="font-sans flex items-center gap-2">
             <Bell className="w-5 h-5" /> Notifications
+            {unreadNotifications.length > 0 && (
+              <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                </span>
+                {unreadNotifications.length} new
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
@@ -62,7 +73,10 @@ function AdminNotificationsPanel({ open, onClose }: { open: boolean; onClose: ()
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <p className="font-medium text-sm">{notif.title}</p>
+                  <div className="flex items-center gap-2">
+                    {!notif.isRead && <span className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.12)]" />}
+                    <p className="font-medium text-sm">{notif.title}</p>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">
                     {new Date(notif.createdAt).toLocaleString("en-KE")}
@@ -85,6 +99,7 @@ function AdminNotificationsPanel({ open, onClose }: { open: boolean; onClose: ()
 function OrderDetailDialog({ open, onClose, order }: { open: boolean; onClose: () => void; order: (Order & { customer?: User }) | null }) {
   const { toast } = useToast();
   const [newPrice, setNewPrice] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
 
   const { data: photos = [] } = useQuery<OrderPhoto[]>({
     queryKey: ["/api/orders", order?.id, "photos"],
@@ -104,6 +119,29 @@ function OrderDetailDialog({ open, onClose, order }: { open: boolean; onClose: (
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       toast({ title: "Price adjusted", description: "Customer has been notified of updated balance." });
       setNewPrice("");
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const markPaid = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/admin/orders/${order?.id}/mark-paid`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats/extended"] });
+      toast({ title: "Payment recorded", description: "Balance cleared and customer notified." });
+      onClose();
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const cancelOrder = useMutation({
+    mutationFn: () => apiRequest("PATCH", `/api/admin/orders/${order?.id}/cancel`, { reason: cancelReason.trim() || undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats/extended"] });
+      toast({ title: "Order cancelled", description: "This order has been moved out of active workflow." });
+      setCancelReason("");
+      onClose();
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -131,12 +169,66 @@ function OrderDetailDialog({ open, onClose, order }: { open: boolean; onClose: (
             <div><span className="text-muted-foreground">Total:</span> <span className="font-bold">KES {parseFloat(order.totalAmount).toLocaleString()}</span></div>
             <div><span className="text-muted-foreground">Balance Due:</span> <span className="font-bold text-red-600">KES {parseFloat(order.balanceDue).toLocaleString()}</span></div>
             <div><span className="text-muted-foreground">Deposit:</span> KES {parseFloat(order.depositPaid).toLocaleString()}</div>
-            <div><span className="text-muted-foreground">Status:</span> {order.status}</div>
+            <div><span className="text-muted-foreground">Status:</span> {order.isCancelled ? "Cancelled" : order.status}</div>
             {(order as any).pickupOption && <div><span className="text-muted-foreground">Pickup:</span> {(order as any).pickupOption === "request_pickup" ? "We pick up" : "Customer brings"}</div>}
             {(order as any).returnOption && <div><span className="text-muted-foreground">Return:</span> {(order as any).returnOption === "request_delivery" ? "We deliver" : "Customer collects"}</div>}
             {order.locationName && <div className="col-span-2"><span className="text-muted-foreground">Location:</span> {order.locationName}</div>}
             {order.notes && <div className="col-span-2"><span className="text-muted-foreground">Notes:</span> {order.notes}</div>}
+            {order.isCancelled && order.cancellationReason && <div className="col-span-2"><span className="text-muted-foreground">Cancellation:</span> {order.cancellationReason}</div>}
           </div>
+
+          {!order.isCancelled && parseFloat(order.balanceDue) > 0 && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-emerald-900">Record Cash / Manual Payment</p>
+                  <p className="text-xs text-emerald-800/80">
+                    Use this when payment is made at the premises. It clears the outstanding balance and notifies the customer.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => markPaid.mutate()}
+                  disabled={markPaid.isPending}
+                  data-testid={`button-mark-paid-${order.id}`}
+                >
+                  {markPaid.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1 h-3.5 w-3.5" />}
+                  Mark Fully Paid
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!order.isCancelled && !["DELIVERED", "COMPLETED"].includes(order.status) && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-3">
+              <div className="space-y-2">
+                <div>
+                  <p className="text-sm font-semibold text-rose-900">Cancel Order</p>
+                  <p className="text-xs text-rose-800/80">Use this if the booking is called off or no longer needs service.</p>
+                </div>
+                <Textarea
+                  value={cancelReason}
+                  onChange={e => setCancelReason(e.target.value)}
+                  placeholder="Optional reason for cancellation"
+                  className="min-h-[84px] text-xs"
+                  data-testid={`textarea-cancel-order-${order.id}`}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => cancelOrder.mutate()}
+                    disabled={cancelOrder.isPending}
+                    data-testid={`button-cancel-order-${order.id}`}
+                  >
+                    {cancelOrder.isPending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <XCircle className="mr-1 h-3.5 w-3.5" />}
+                    Cancel Order
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {photos.length > 0 && (
             <div>
@@ -151,6 +243,7 @@ function OrderDetailDialog({ open, onClose, order }: { open: boolean; onClose: (
             </div>
           )}
 
+          {!order.isCancelled && (
           <div className="border-t pt-3">
             <h4 className="text-sm font-semibold mb-2">Adjust Price</h4>
             <div className="flex items-center gap-2">
@@ -174,6 +267,7 @@ function OrderDetailDialog({ open, onClose, order }: { open: boolean; onClose: (
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">This will update the balance due and notify the customer.</p>
           </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -196,6 +290,7 @@ function OrdersTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats/extended"] });
       toast({ title: "Status Updated" });
     },
   });
@@ -206,13 +301,19 @@ function OrdersTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats/extended"] });
       toast({ title: "Order Updated" });
     },
   });
 
   if (isLoading) return <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>;
 
-  const filtered = statusFilter === "ALL" ? orders : orders.filter(o => o.status === statusFilter);
+  const filtered =
+    statusFilter === "ALL"
+      ? orders
+      : statusFilter === "CANCELLED"
+        ? orders.filter((o) => o.isCancelled)
+        : orders.filter((o) => !o.isCancelled && o.status === statusFilter);
 
   return (
     <div className="space-y-3">
@@ -220,8 +321,11 @@ function OrdersTab() {
         <Button size="sm" variant={statusFilter === "ALL" ? "default" : "outline"} className="h-7 text-xs shrink-0" onClick={() => setStatusFilter("ALL")} data-testid="filter-all">
           All ({orders.length})
         </Button>
+        <Button size="sm" variant={statusFilter === "CANCELLED" ? "default" : "outline"} className="h-7 text-xs shrink-0" onClick={() => setStatusFilter("CANCELLED")} data-testid="filter-cancelled">
+          Cancelled ({orders.filter((o) => o.isCancelled).length})
+        </Button>
         {ORDER_STATUSES.map(s => {
-          const count = orders.filter(o => o.status === s.value).length;
+          const count = orders.filter(o => !o.isCancelled && o.status === s.value).length;
           return (
             <Button key={s.value} size="sm" variant={statusFilter === s.value ? "default" : "outline"} className="h-7 text-xs shrink-0" onClick={() => setStatusFilter(s.value)} data-testid={`filter-${s.value}`}>
               {s.label} ({count})
@@ -254,13 +358,13 @@ function OrdersTab() {
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusInfo.color}`}>{statusInfo.label}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${order.isCancelled ? "bg-rose-100 text-rose-700" : statusInfo.color}`}>{order.isCancelled ? "Cancelled" : statusInfo.label}</span>
                 <p className="text-sm font-bold">KES {parseFloat(order.totalAmount).toLocaleString()}</p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t">
-              <Select value={order.status} onValueChange={v => updateStatus.mutate({ id: order.id, status: v })}>
+              <Select value={order.status} onValueChange={v => updateStatus.mutate({ id: order.id, status: v })} disabled={order.isCancelled}>
                 <SelectTrigger className="w-[140px] h-7 text-xs" data-testid={`select-status-${order.id}`}>
                   <SelectValue />
                 </SelectTrigger>
@@ -1035,7 +1139,7 @@ function PromotionsTab() {
           </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-xs cursor-pointer">
-                           <input
+              <input
   type="checkbox"
   checked={form.targetTag === "VIP"}
   onChange={e =>
@@ -1277,6 +1381,7 @@ export default function AdminDashboard() {
   const { data: stats } = useQuery<{
     totalUsers: number; totalOrders: number; scheduledDeliveries: number; activePromotions: number;
     total: number; pending: number; inProgress: number; completed: number; revenue: number;
+    pendingPayments: number; earningsToday: number; earningsWeek: number; earningsMonth: number; cancelled: number;
     activeJobs?: number; topCarpetTypes?: { type: string; count: number }[];
   }>({ queryKey: ["/api/admin/stats/extended"] });
 
@@ -1306,15 +1411,40 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="group relative rounded-full border border-transparent p-2 transition-all duration-200 hover:border-white/10 hover:bg-white/10 hover:shadow-[0_12px_24px_rgba(15,23,42,0.18)]"
               onClick={() => setShowNotifs(true)}
               data-testid="button-admin-notifications"
+              aria-label={
+                unreadCount > 0
+                  ? `${unreadCount} unread notifications`
+                  : "Open notifications"
+              }
+              title={
+                unreadCount > 0
+                  ? `${unreadCount} new notification${unreadCount > 1 ? "s" : ""}`
+                  : "Notifications"
+              }
             >
-              <Bell className="w-5 h-5 text-slate-300" />
+              <Bell className="w-5 h-5 text-slate-300 transition-colors duration-200 group-hover:text-white" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center" data-testid="badge-admin-unread">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
+                <>
+                  <span className="absolute right-0.5 top-0.5 flex h-2.5 w-2.5" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(15,23,42,0.92)]" />
+                  </span>
+                  <span className="absolute -right-2 -top-2 min-w-[1.3rem] rounded-full bg-gradient-to-r from-red-500 to-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white shadow-[0_8px_20px_rgba(239,68,68,0.35)]" data-testid="badge-admin-unread">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                  <span className="pointer-events-none absolute right-0 top-full z-20 hidden w-max min-w-[148px] translate-y-2 rounded-2xl border border-white/10 bg-slate-950/90 px-3 py-2 text-left opacity-0 shadow-[0_16px_40px_rgba(2,6,23,0.45)] backdrop-blur-xl transition-all duration-200 group-hover:translate-y-3 group-hover:opacity-100 group-focus-visible:translate-y-3 group-focus-visible:opacity-100 sm:block">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-red-400">
+                      Notifications
+                    </span>
+                    <span className="mt-1 flex items-center gap-2 text-xs font-medium text-slate-100">
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      {unreadCount} new notification{unreadCount > 1 ? "s" : ""}
+                    </span>
+                  </span>
+                </>
               )}
             </button>
             <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => logout.mutate()} data-testid="button-admin-logout">
@@ -1325,14 +1455,39 @@ export default function AdminDashboard() {
       </header>
 
       <div className="max-w-5xl mx-auto w-full px-4 py-5 flex-1">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <Card className="p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="w-4 h-4 opacity-80" />
-              <p className="text-[10px] opacity-80">Total Revenue</p>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+          <Card className="col-span-2 lg:col-span-3 overflow-hidden border-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_28%),linear-gradient(135deg,#0f172a,#1d4ed8)] p-5 text-white">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-sky-200/90">Revenue Command</p>
+                <p className="mt-1 text-3xl font-bold" data-testid="text-stat-revenue">
+                  KES {(stats?.revenue ?? 0).toLocaleString()}
+                </p>
+                <p className="mt-1 text-sm text-slate-300">Recorded collections across M-Pesa and cash/manual confirmations.</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-xs md:min-w-[340px]">
+                <div className="rounded-2xl bg-white/10 px-3 py-3 backdrop-blur-sm">
+                  <p className="text-slate-300">Today</p>
+                  <p className="mt-1 text-base font-semibold">KES {(stats?.earningsToday ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 px-3 py-3 backdrop-blur-sm">
+                  <p className="text-slate-300">This Week</p>
+                  <p className="mt-1 text-base font-semibold">KES {(stats?.earningsWeek ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 px-3 py-3 backdrop-blur-sm">
+                  <p className="text-slate-300">This Month</p>
+                  <p className="mt-1 text-base font-semibold">KES {(stats?.earningsMonth ?? 0).toLocaleString()}</p>
+                </div>
+              </div>
             </div>
-            <p className="text-xl font-bold" data-testid="text-stat-revenue">
-              KES {(stats?.revenue ?? 0).toLocaleString()}
+          </Card>
+          <Card className="p-4 bg-gradient-to-br from-amber-500 to-orange-500 text-white border-0">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="w-4 h-4 opacity-80" />
+              <p className="text-[10px] opacity-80">Pending Payments</p>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-stat-pending-payments">
+              KES {(stats?.pendingPayments ?? 0).toLocaleString()}
             </p>
           </Card>
           <Card className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
@@ -1344,13 +1499,31 @@ export default function AdminDashboard() {
               {stats?.activeJobs ?? 0}
             </p>
           </Card>
-          <Card className="p-4 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0">
+          <Card className="p-4 bg-gradient-to-br from-rose-500 to-rose-600 text-white border-0">
+            <div className="flex items-center gap-2 mb-1">
+              <XCircle className="w-4 h-4 opacity-80" />
+              <p className="text-[10px] opacity-80">Cancelled</p>
+            </div>
+            <p className="text-xl font-bold" data-testid="text-stat-cancelled">
+              {stats?.cancelled ?? 0}
+            </p>
+          </Card>
+          <Card className="p-4 bg-gradient-to-br from-violet-500 to-violet-600 text-white border-0">
             <div className="flex items-center gap-2 mb-1">
               <Users className="w-4 h-4 opacity-80" />
-              <p className="text-[10px] opacity-80">Total Users</p>
+              <p className="text-[10px] opacity-80">Customers</p>
             </div>
             <p className="text-xl font-bold" data-testid="text-stat-users">
               {stats?.totalUsers ?? 0}
+            </p>
+          </Card>
+          <Card className="p-4 bg-gradient-to-br from-slate-700 to-slate-800 text-white border-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="w-4 h-4 opacity-80" />
+              <p className="text-[10px] opacity-80">Pending Review</p>
+            </div>
+            <p className="text-xl font-bold">
+              {stats?.pending ?? 0}
             </p>
           </Card>
           <Card className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
