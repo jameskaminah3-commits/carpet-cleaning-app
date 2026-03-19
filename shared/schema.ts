@@ -22,6 +22,7 @@ export const deliveryStatusEnum = pgEnum("delivery_status", ["scheduled", "in_tr
 export const promoTypeEnum = pgEnum("promo_type", ["percentage", "fixed", "free_pickup", "free_delivery"]);
 export const promoAppliesEnum = pgEnum("promo_applies", ["order", "delivery", "invoice"]);
 export const customerTagEnum = pgEnum("customer_tag", ["VIP", "Frequent", "Corporate", "One-time"]);
+export const paymentMethodEnum = pgEnum("payment_method", ["mpesa", "cash", "manual"]);
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -30,7 +31,8 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   emailVerified: boolean("email_verified").default(false),
   failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
-  lockUntil: timestamp("lock_until"),
+  lockUntil: timestamp("account_locked_until"),
+  legacyLockUntil: timestamp("lock_until"),
   name: text("name").notNull(),
   role: roleEnum("role").notNull().default("customer"),
   otpCode: text("otp_code"),
@@ -91,6 +93,9 @@ export const orders = pgTable("orders", {
   pickupFee: decimal("pickup_fee", { precision: 10, scale: 2 }).notNull().default("0"),
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull().default("0"),
   expressFee: decimal("express_fee", { precision: 10, scale: 2 }).notNull().default("0"),
+  isCancelled: boolean("is_cancelled").notNull().default(false),
+  cancelledAt: timestamp("cancelled_at"),
+  cancellationReason: text("cancellation_reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -213,7 +218,18 @@ export const mpesaTransactions = pgTable("mpesa_transactions", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const paymentRecords = pgTable("payment_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  method: paymentMethodEnum("method").notNull(),
+  reference: text("reference"),
+  recordedByUserId: varchar("recorded_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertMpesaTransactionSchema = createInsertSchema(mpesaTransactions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPaymentRecordSchema = createInsertSchema(paymentRecords).omit({ id: true, createdAt: true });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, otpCode: true, otpExpiry: true, createdAt: true });
 export const insertPricingRuleSchema = createInsertSchema(pricingRules).omit({ id: true });
@@ -254,6 +270,8 @@ export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
 export type InsertMpesaTransaction = z.infer<typeof insertMpesaTransactionSchema>;
 export type MpesaTransaction = typeof mpesaTransactions.$inferSelect;
+export type InsertPaymentRecord = z.infer<typeof insertPaymentRecordSchema>;
+export type PaymentRecord = typeof paymentRecords.$inferSelect;
 
 export const phoneSchema = z.string().transform((val) => {
   let cleaned = val.replace(/\s+/g, "").replace(/-/g, "");
