@@ -3,7 +3,7 @@ import { eq, and, desc, sql, isNull, ne } from "drizzle-orm";
 import {
   users, sessions, orders, orderItems, orderPhotos, pricingRules, deliveryZones,
   mediaLibrary, deliveries, promotions, savedAddresses, notifications, reviews,
-  mpesaTransactions,
+  mpesaTransactions, paymentRecords,
   type User, type InsertUser,
   type PricingRule, type InsertPricingRule,
   type DeliveryZone, type InsertDeliveryZone,
@@ -17,6 +17,7 @@ import {
   type Notification, type InsertNotification,
   type Review, type InsertReview,
   type MpesaTransaction, type InsertMpesaTransaction,
+  type PaymentRecord, type InsertPaymentRecord,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -52,6 +53,7 @@ export interface IStorage {
   getOrdersByTechnician(technicianId: string): Promise<(Order & { customer?: User })[]>;
   getUnassignedOrders(): Promise<(Order & { customer?: User })[]>;
   updateOrderStatus(id: string, status: string): Promise<void>;
+  cancelOrder(id: string, reason: string | null): Promise<void>;
   updateOrderLock(id: string, isLocked: boolean): Promise<void>;
   updateOrderPrice(id: string, totalAmount: string): Promise<Order>;
   assignTechnician(orderId: string, technicianId: string): Promise<void>;
@@ -103,10 +105,13 @@ export interface IStorage {
   getMpesaTransactionByCheckoutRequestId(checkoutRequestId: string): Promise<MpesaTransaction | undefined>;
   updateMpesaTransactionStatus(id: string, data: Partial<{ status: string; mpesaReceiptNumber: string; resultCode: number; resultDesc: string; rawCallback: any }>): Promise<MpesaTransaction>;
   getMpesaTransactionsByOrder(orderId: string): Promise<MpesaTransaction[]>;
+  createPaymentRecord(record: InsertPaymentRecord): Promise<PaymentRecord>;
+  getPaymentRecordsByOrder(orderId: string): Promise<PaymentRecord[]>;
 
   getStats(): Promise<{
     totalUsers: number; totalOrders: number; scheduledDeliveries: number; activePromotions: number;
     total: number; pending: number; inProgress: number; completed: number; revenue: number;
+    pendingPayments: number; earningsToday: number; earningsWeek: number; earningsMonth: number; cancelled: number; activeJobs: number;
   }>;
 
   seedData(): Promise<void>;
@@ -116,7 +121,7 @@ export class DatabaseStorage implements IStorage {
   private isPromoForAllCustomers(targetTag: string | null | undefined) {
     return !targetTag || targetTag === "all";
   }
-  
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -278,6 +283,18 @@ async getUserByEmail(email: string): Promise<User | undefined> {
 
   async updateOrderStatus(id: string, status: string): Promise<void> {
     await db.update(orders).set({ status: status as any, updatedAt: new Date() }).where(eq(orders.id, id));
+  }
+
+  async cancelOrder(id: string, reason: string | null): Promise<void> {
+    await db
+      .update(orders)
+      .set({
+        isCancelled: true,
+        cancelledAt: new Date(),
+        cancellationReason: reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, id));
   }
 
   async updateOrderLock(id: string, isLocked: boolean): Promise<void> {
@@ -521,24 +538,60 @@ async getUserByEmail(email: string): Promise<User | undefined> {
     return db.select().from(mpesaTransactions).where(eq(mpesaTransactions.orderId, orderId)).orderBy(desc(mpesaTransactions.createdAt));
   }
 
+  async createPaymentRecord(record: InsertPaymentRecord): Promise<PaymentRecord> {
+    const [created] = await db.insert(paymentRecords).values(record).returning();
+    return created;
+  }
+
+  async getPaymentRecordsByOrder(orderId: string): Promise<PaymentRecord[]> {
+    return db.select().from(paymentRecords).where(eq(paymentRecords.orderId, orderId)).orderBy(desc(paymentRecords.createdAt));
+  }
+
   async getStats() {
     const allOrders = await db.select().from(orders);
     const allUsers = await db.select().from(users).where(eq(users.role, "customer"));
     const allDeliveries = await db.select().from(deliveries).where(eq(deliveries.status, "scheduled"));
     const activePromos = await db.select().from(promotions).where(eq(promotions.isActive, true));
+    const allPaymentRecords = await db.select().from(paymentRecords);
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayIndex = now.getDay();
+    const daysSinceMonday = (dayIndex + 6) % 7;
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const total = allOrders.length;
-    const pending = allOrders.filter((o) => o.status === "SUBMITTED" || o.status === "PENDING" || o.status === "PENDING_PAYMENT").length;
-    const completed = allOrders.filter((o) => o.status === "COMPLETED" || o.status === "DELIVERED").length;
-    const inProgress = allOrders.filter((o) => !["SUBMITTED", "PENDING", "PENDING_PAYMENT", "COMPLETED", "DELIVERED"].includes(o.status)).length;
-    const revenue = allOrders.filter((o) => o.status === "COMPLETED").reduce((sum, o) => sum + parseFloat(o.totalAmount), 0);
+    const liveOrders = allOrders.filter((o) => !o.isCancelled);
+    const pending = liveOrders.filter((o) => o.status === "SUBMITTED" || o.status === "PENDING" || o.status === "PENDING_PAYMENT").length;
+    const completed = liveOrders.filter((o) => o.status === "COMPLETED" || o.status === "DELIVERED").length;
+    const inProgress = liveOrders.filter((o) => !["SUBMITTED", "PENDING", "PENDING_PAYMENT", "COMPLETED", "DELIVERED"].includes(o.status)).length;
+    const revenue = allPaymentRecords.reduce((sum, record) => sum + parseFloat(record.amount), 0);
+    const pendingPayments = liveOrders.reduce((sum, order) => sum + Math.max(0, parseFloat(order.balanceDue)), 0);
+    const cancelled = allOrders.filter((o) => o.isCancelled).length;
+    const activeJobs = liveOrders.filter((o) => !["COMPLETED", "DELIVERED"].includes(o.status)).length;
+
+    const sumSince = (start: Date) =>
+      allPaymentRecords
+        .filter((record) => record.createdAt && new Date(record.createdAt) >= start)
+        .reduce((sum, record) => sum + parseFloat(record.amount), 0);
 
     return {
       totalUsers: allUsers.length,
       totalOrders: total,
       scheduledDeliveries: allDeliveries.length,
       activePromotions: activePromos.length,
-      total, pending, inProgress, completed, revenue,
+      total,
+      pending,
+      inProgress,
+      completed,
+      revenue,
+      pendingPayments,
+      earningsToday: sumSince(startOfToday),
+      earningsWeek: sumSince(startOfWeek),
+      earningsMonth: sumSince(startOfMonth),
+      cancelled,
+      activeJobs,
     };
   }
 
