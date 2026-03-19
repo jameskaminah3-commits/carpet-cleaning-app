@@ -3,7 +3,15 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import rateLimit from "express-rate-limit";
 import { db } from "./db";
-import { sendOtpEmail } from "./email";
+import {
+  sendAdminPaymentRecordedEmail,
+  sendAdminNewOrderEmail,
+  sendCustomerOrderReceivedEmail,
+  sendPaymentReceivedEmail,
+  sendPaymentRequestEmail,
+  sendOrderStatusEmail,
+  sendOtpEmail,
+} from "./email";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { randomUUID, randomInt } from "crypto";
@@ -22,6 +30,7 @@ const otpLimiter = rateLimit({
 
 const isPromoForAllCustomers = (targetTag: string | null | undefined) =>
   !targetTag || targetTag === "all";
+
 const getPublicBaseUrl = (req: Request) => {
   const forwardedProtoHeader = req.headers["x-forwarded-proto"];
   const forwardedHostHeader = req.headers["x-forwarded-host"];
@@ -40,6 +49,58 @@ const resolvePublicAssetUrl = (req: Request, fileKey: string | null | undefined)
 
   const baseUrl = getPublicBaseUrl(req);
   return baseUrl ? `${baseUrl}${fileKey}` : fileKey;
+};
+
+const normalizeEmailList = (emails: Array<string | null | undefined>) =>
+  Array.from(new Set(emails.map((email) => email?.trim()).filter((email): email is string => Boolean(email))));
+
+const getAdminNotificationRecipients = async () => {
+  const users = await storage.getAllUsers();
+  const adminEmails = users
+    .filter((user) => user.role === "admin" && user.isActive && user.email)
+    .map((user) => user.email);
+  const envEmails = (process.env.ADMIN_NOTIFICATION_EMAIL || "")
+    .split(",")
+    .map((email) => email.trim())
+    .filter(Boolean);
+
+  return normalizeEmailList([...adminEmails, ...envEmails]);
+};
+
+const sendAdminPaymentEmails = async (args: {
+  orderId: string;
+  customerName: string;
+  amount: string;
+  method: string;
+  receiptNumber?: string;
+}) => {
+  const recipients = await getAdminNotificationRecipients();
+  if (recipients.length === 0) {
+    console.warn(`[payment-email] No admin recipients configured for order ${args.orderId}`);
+    return;
+  }
+
+  const results = await Promise.allSettled(
+    recipients.map((email) =>
+      sendAdminPaymentRecordedEmail({
+        email,
+        orderId: args.orderId,
+        customerName: args.customerName,
+        amount: args.amount,
+        method: args.method,
+        receiptNumber: args.receiptNumber,
+      }),
+    ),
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.error(
+        `[payment-email] Failed for ${recipients[index]} on order ${args.orderId}:`,
+        result.reason,
+      );
+    }
+  });
 };
 
 declare module "express-serve-static-core" {
@@ -531,6 +592,73 @@ res.setHeader(
         });
       }
 
+      const customer = await storage.getUser(req.userId!);
+
+      await storage.createNotification({
+        userId: order.customerId,
+        type: "order_status",
+        title: "Order Received",
+        message: "We have received your order and our team will review it shortly.",
+        orderId: order.id,
+        amount: null,
+        isRead: false,
+      });
+
+      const adminUsers = (await storage.getAllUsers()).filter(
+        (user) => user.role === "admin" && user.isActive,
+      );
+
+      await Promise.allSettled(
+        adminUsers.map((admin) =>
+          storage.createNotification({
+            userId: admin.id,
+            type: "system",
+            title: "New Order Received",
+            message: `${customer?.name || "A customer"} placed a new order worth KES ${parseFloat(order.totalAmount).toLocaleString()}.`,
+            orderId: order.id,
+            amount: order.totalAmount,
+            isRead: false,
+          }),
+        ),
+      );
+
+      const adminEmailRecipients = normalizeEmailList([
+        ...(await getAdminNotificationRecipients()),
+      ]);
+
+      await Promise.allSettled([
+        ...(customer?.email
+          ? [
+              sendCustomerOrderReceivedEmail({
+                email: customer.email,
+                name: customer.name,
+                orderId: order.id,
+                totalAmount: order.totalAmount,
+                itemsCount: items.length,
+                pickupOption: order.pickupOption,
+                returnOption: order.returnOption,
+                locationName: order.locationName,
+                pickupAddress: order.pickupAddress,
+              }),
+            ]
+          : []),
+        ...adminEmailRecipients.map((email) =>
+          sendAdminNewOrderEmail({
+            email,
+            orderId: order.id,
+            customerName: customer?.name || "Unknown customer",
+            customerEmail: customer?.email,
+            customerPhone: customer?.phone || "Not provided",
+            totalAmount: order.totalAmount,
+            itemsCount: items.length,
+            pickupOption: order.pickupOption,
+            returnOption: order.returnOption,
+            locationName: order.locationName,
+            pickupAddress: order.pickupAddress,
+          }),
+        ),
+      ]);
+
       res.json(order);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -627,6 +755,9 @@ res.setHeader(
       }
       const order = await storage.getOrder(paramId(req));
       if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.isCancelled) {
+        return res.status(400).json({ message: "Cancelled orders cannot be updated" });
+      }
       if (req.body.status === "IN_CLEANING" && parseFloat(order.balanceDue) > 0) {
         return res.status(400).json({ message: `Cannot start cleaning — customer has outstanding balance of KES ${parseFloat(order.balanceDue).toLocaleString()}. Payment must be cleared first.` });
       }
@@ -644,6 +775,7 @@ res.setHeader(
       await storage.updateOrderStatus(paramId(req), req.body.status);
       const statusInfo = ORDER_STATUSES.find(s => s.value === req.body.status);
       const statusLabel = statusInfo?.label || req.body.status;
+      const customer = await storage.getUser(order.customerId);
       await storage.createNotification({
         userId: order.customerId,
         type: "order_status",
@@ -653,6 +785,74 @@ res.setHeader(
         amount: null,
         isRead: false,
       });
+
+      if (customer?.email) {
+        if (req.body.status === "PENDING_PAYMENT") {
+          await sendPaymentRequestEmail({
+            email: customer.email,
+            name: customer.name,
+            orderId: order.id,
+            amount: order.balanceDue,
+            locationName: order.locationName,
+            pickupAddress: order.pickupAddress,
+          }).catch(console.error);
+        } else {
+          await sendOrderStatusEmail({
+            email: customer.email,
+            name: customer.name,
+            orderId: order.id,
+            statusLabel,
+            locationName: order.locationName,
+            pickupAddress: order.pickupAddress,
+          }).catch(console.error);
+        }
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/orders/:id/cancel", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const order = await storage.getOrder(paramId(req));
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.isCancelled) return res.status(400).json({ message: "Order is already cancelled" });
+      if (["DELIVERED", "COMPLETED"].includes(order.status)) {
+        return res.status(400).json({ message: "Delivered or completed orders cannot be cancelled" });
+      }
+
+      const reason = typeof req.body.reason === "string" && req.body.reason.trim() ? req.body.reason.trim() : null;
+      await storage.cancelOrder(order.id, reason);
+
+      await storage.createNotification({
+        userId: order.customerId,
+        type: "system",
+        title: "Order Cancelled",
+        message: reason
+          ? `Your order has been cancelled. Reason: ${reason}`
+          : "Your order has been cancelled. Please contact support if you need help rebooking.",
+        orderId: order.id,
+        amount: null,
+        isRead: false,
+      });
+
+      const adminUsers = (await storage.getAllUsers()).filter((user) => user.role === "admin" && user.isActive);
+      await Promise.allSettled(
+        adminUsers.map((admin) =>
+          storage.createNotification({
+            userId: admin.id,
+            type: "system",
+            title: "Order Cancelled",
+            message: `Order ${order.id.slice(0, 8).toUpperCase()} was cancelled${reason ? `: ${reason}` : "."}`,
+            orderId: order.id,
+            amount: null,
+            isRead: false,
+          }),
+        ),
+      );
+
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -691,6 +891,101 @@ res.setHeader(
         amount: updatedOrder.balanceDue,
         isRead: false,
       });
+      const customer = await storage.getUser(order.customerId);
+      if (customer?.email) {
+        await sendPaymentRequestEmail({
+          email: customer.email,
+          name: customer.name,
+          orderId: order.id,
+          amount: updatedOrder.balanceDue,
+          locationName: order.locationName,
+          pickupAddress: order.pickupAddress,
+        }).catch(console.error);
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch("/api/admin/orders/:id/mark-paid", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const order = await storage.getOrder(paramId(req));
+      if (!order) return res.status(404).json({ message: "Order not found" });
+
+      const totalAmount = parseFloat(order.totalAmount);
+      const depositPaid = parseFloat(order.depositPaid);
+      const balanceDue = Math.max(0, parseFloat(order.balanceDue));
+
+      if (balanceDue <= 0) {
+        return res.status(400).json({ message: "This order is already fully paid" });
+      }
+      if (order.isCancelled) {
+        return res.status(400).json({ message: "Cancelled orders cannot be marked as paid" });
+      }
+
+      const newDepositPaid = Math.min(totalAmount, depositPaid + balanceDue);
+
+      await db.update(orders).set({
+        depositPaid: newDepositPaid.toFixed(2),
+        balanceDue: "0.00",
+        updatedAt: new Date(),
+      }).where(eq(orders.id, order.id));
+
+      await storage.createPaymentRecord({
+        orderId: order.id,
+        amount: balanceDue.toFixed(2),
+        method: "cash",
+        reference: "Cash payment recorded by admin",
+        recordedByUserId: req.userId!,
+      });
+
+      const adminUsers = (await storage.getAllUsers()).filter(
+        (user) => user.role === "admin" && user.isActive,
+      );
+
+      await Promise.allSettled(
+        adminUsers.map((admin) =>
+          storage.createNotification({
+            userId: admin.id,
+            type: "system",
+            title: "Manual Payment Recorded",
+            message: `Payment of KES ${balanceDue.toLocaleString()} was recorded for order ${order.id.slice(0, 8).toUpperCase()}.`,
+            orderId: order.id,
+            amount: balanceDue.toFixed(2),
+            isRead: false,
+          }),
+        ),
+      );
+
+      await storage.createNotification({
+        userId: order.customerId,
+        type: "system",
+        title: "Payment Received",
+        message: `Payment of KES ${balanceDue.toLocaleString()} has been recorded by admin.`,
+        orderId: order.id,
+        amount: balanceDue.toFixed(2),
+        isRead: false,
+      });
+
+      const customer = await storage.getUser(order.customerId);
+      if (customer?.email) {
+        await sendPaymentReceivedEmail({
+          email: customer.email,
+          name: customer.name,
+          orderId: order.id,
+          amount: balanceDue.toFixed(2),
+          method: "Cash / manual confirmation",
+        }).catch(console.error);
+      }
+
+      await sendAdminPaymentEmails({
+        orderId: order.id,
+        customerName: customer?.name || "Unknown customer",
+        amount: balanceDue.toFixed(2),
+        method: "Cash / manual confirmation",
+      });
+
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
@@ -916,6 +1211,7 @@ app.get("/api/promotions/public", async (_req, res) => {
       const order = await storage.getOrder(orderId);
       if (!order) return res.status(404).json({ message: "Order not found" });
       if (order.customerId !== req.userId) return res.status(403).json({ message: "Access denied" });
+      if (order.isCancelled) return res.status(400).json({ message: "Cancelled orders cannot accept payment" });
 
       const amount = parseFloat(order.balanceDue) > 0 ? parseFloat(order.balanceDue) : parseFloat(order.totalAmount);
       if (amount <= 0) return res.status(400).json({ message: "No balance due" });
@@ -1018,6 +1314,14 @@ app.get("/api/promotions/public", async (_req, res) => {
             updatedAt: new Date(),
           }).where(eq(orders.id, order.id));
 
+          await storage.createPaymentRecord({
+            orderId: order.id,
+            amount: transaction.amount,
+            method: "mpesa",
+            reference: metadata.mpesaReceiptNumber || transaction.checkoutRequestId || null,
+            recordedByUserId: null,
+          });
+
           await storage.createNotification({
             userId: order.customerId,
             type: "system",
@@ -1026,6 +1330,33 @@ app.get("/api/promotions/public", async (_req, res) => {
             orderId: order.id,
             amount: transaction.amount,
             isRead: false,
+          });
+
+          const customer = await storage.getUser(order.customerId);
+          const adminUsers = (await storage.getAllUsers()).filter(
+            (user) => user.role === "admin" && user.isActive,
+          );
+
+          await Promise.allSettled(
+            adminUsers.map((admin) =>
+              storage.createNotification({
+                userId: admin.id,
+                type: "system",
+                title: "Payment Received",
+                message: `M-Pesa payment of KES ${paidAmount.toLocaleString()} received for order ${order.id.slice(0, 8).toUpperCase()}${metadata.mpesaReceiptNumber ? ` (${metadata.mpesaReceiptNumber})` : ""}.`,
+                orderId: order.id,
+                amount: transaction.amount,
+                isRead: false,
+              }),
+            ),
+          );
+
+          await sendAdminPaymentEmails({
+            orderId: order.id,
+            customerName: customer?.name || "Unknown customer",
+            amount: transaction.amount,
+            method: "M-Pesa",
+            receiptNumber: metadata.mpesaReceiptNumber,
           });
         }
       }
@@ -1247,7 +1578,7 @@ app.get("/api/promotions/public", async (_req, res) => {
       const stats = await storage.getStats();
       const allOrders = await storage.getAllOrders();
       const allItems = [];
-      for (const order of allOrders) {
+      for (const order of allOrders.filter((order) => !order.isCancelled)) {
         const items = await storage.getOrderItems(order.id);
         allItems.push(...items);
       }
@@ -1259,8 +1590,7 @@ app.get("/api/promotions/public", async (_req, res) => {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([type, count]) => ({ type, count }));
-      const activeJobs = allOrders.filter(o => !["PENDING", "COMPLETED"].includes(o.status)).length;
-      res.json({ ...stats, activeJobs, topCarpetTypes });
+      res.json({ ...stats, topCarpetTypes });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
