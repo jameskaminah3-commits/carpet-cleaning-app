@@ -14,6 +14,7 @@ import {
   Sparkles,
   Phone,
   Star,
+   Play,
   ChevronRight,
   ArrowRight,
   CheckCircle2,
@@ -300,13 +301,14 @@ const { data: publicMedia = [], isLoading } = useQuery<Media[]>({
     [slides.length],
   );
 
-   if (isLoading) {
+  if (isLoading) {
   return (
     <section className="py-20 text-center">
       <p className="text-muted-foreground">Loading gallery...</p>
     </section>
   );
-}
+  }
+
   const trackItems =
     slides.length >= 3 ? [...slides, ...slides, ...slides] : [...slides];
 
@@ -370,9 +372,13 @@ const { data: publicMedia = [], isLoading } = useQuery<Media[]>({
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                         VIDEO
                       </div>
+                      <div className="absolute left-3 bottom-3 rounded-full bg-black/45 backdrop-blur-sm px-3 py-1.5 text-[11px] font-medium text-white flex items-center gap-1.5">
+                        <Play className="w-3 h-3 fill-current" />
+                        Watch Process
+                      </div>
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <div className="w-12 h-12 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center">
-                          <Zap className="w-5 h-5 text-white" />
+                          <Play className="w-5 h-5 text-white fill-current ml-0.5" />
                         </div>
                       </div>
                     </div>
@@ -502,6 +508,122 @@ const { data: publicMedia = [], isLoading } = useQuery<Media[]>({
     </>
   );
 }
+
+function HeroVideoSpotlight() {
+  const { data: publicMedia = [] } = useQuery<Media[]>({
+    queryKey: ["/api/media/public"],
+  });
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const featuredVideo = useMemo(
+    () => publicMedia.find((item) => item.mimeType.startsWith("video")),
+    [publicMedia],
+  );
+
+  if (!featuredVideo) return null;
+
+  return (
+    <>
+      <motion.button
+        type="button"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        onClick={() => setLightboxOpen(true)}
+        className="group relative mx-auto w-full max-w-3xl overflow-hidden rounded-[28px] border border-[#CFE0FF] bg-[linear-gradient(135deg,rgba(52,106,225,0.94),rgba(91,102,211,0.94))] p-3 text-left shadow-[0_24px_70px_rgba(8,32,74,0.14)] transition-transform duration-200 hover:-translate-y-1 sm:p-4"
+        data-testid="button-process-video"
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(94,230,168,0.18),transparent_24%)]" />
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-[24px] bg-slate-900/40 sm:h-28 sm:w-60">
+            <video
+              src={featuredVideo.fileKey}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              aria-hidden="true"
+            />
+            <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/60 via-slate-950/10 to-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/88 text-slate-900 shadow-lg shadow-slate-950/20 transition-transform duration-200 group-hover:scale-105">
+                <Play className="ml-0.5 h-4 w-4 fill-current" />
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1 px-1 pb-1 sm:px-0 sm:pb-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#5EE6A8]">
+              Watch
+            </p>
+            <h3 className="mt-2 line-clamp-2 text-lg font-semibold leading-tight text-white sm:text-2xl">
+              {featuredVideo.title || "See How We Clean and Restore Carpets"}
+            </h3>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[11px] font-medium text-white/90">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#5EE6A8]" />
+              30 sec preview
+            </div>
+          </div>
+        </div>
+      </motion.button>
+
+      <AnimatePresence>
+        {lightboxOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+            onClick={() => setLightboxOpen(false)}
+            data-testid="hero-video-lightbox-overlay"
+          >
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              transition={{ type: "spring", damping: 24, stiffness: 260 }}
+              className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setLightboxOpen(false)}
+                className="absolute -top-2 -right-2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+                data-testid="button-close-process-video-lightbox"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <video
+                src={featuredVideo.fileKey}
+                className="w-full max-h-[75vh] rounded-xl object-contain"
+                autoPlay
+                loop
+                controls
+                playsInline
+                preload="auto"
+                data-testid="process-video-lightbox"
+              />
+
+              <div className="mt-4 text-center">
+                <h3 className="text-white font-semibold text-lg">
+                  {featuredVideo.title}
+                </h3>
+                {featuredVideo.subtitle && (
+                  <p className="text-white/60 text-sm mt-1">
+                    {featuredVideo.subtitle}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 
 function TestimonialsCarousel() {
   const [current, setCurrent] = useState(0);
@@ -689,7 +811,8 @@ function TestimonialsCarousel() {
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-      // ✅ ADD THIS BLOCK HERE
+  const [headerSolid, setHeaderSolid] = useState(false);
+    // ✅ ADD THIS BLOCK HERE
   const { data: promos = [] } = useQuery<any[]>({
   queryKey: ["/api/promotions/public"],
   queryFn: async () => {
@@ -698,11 +821,12 @@ export default function LandingPage() {
     return res.json();
   },
 });
-    const publicPromos = promos.filter(
+
+  const publicPromos = promos.filter(
     (p) => p.isActive && (!p.targetTag || p.targetTag === "all")
   );
   const featuredPromo = publicPromos[0];
-  const activityLocations = [
+const activityLocations = [
   "Westlands",
   "Kilimani",
   "Karen",
@@ -742,6 +866,7 @@ export default function LandingPage() {
   "Kayole",
   "Langata",
 ];
+
 const [carpetsCleaned, setCarpetsCleaned] = useState(2634);
 const [activityLocation, setActivityLocation] = useState(activityLocations[0]);
 
@@ -760,17 +885,32 @@ useEffect(() => {
 
   updateActivity();
 }, []);
+
+useEffect(() => {
+  const handleScroll = () => {
+    setHeaderSolid(window.scrollY > 24);
+  };
+
+  handleScroll();
+  window.addEventListener("scroll", handleScroll, { passive: true });
+
+  return () => {
+    window.removeEventListener("scroll", handleScroll);
+  };
+}, []);
+
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
-          {featuredPromo && (
-      <FloatingPromoBar
-        promo={featuredPromo}
-        onAction={() => navigate("/book")}
-      />
-    )}
-      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
+  <div className="min-h-screen bg-background overflow-hidden">
+
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${
+        headerSolid
+          ? "border-slate-200/80 bg-white/92 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur-xl"
+          : "border-white/15 bg-background/72 backdrop-blur-md"
+      }`}
+    >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 h-16">
-<div className="flex items-center cursor-pointer" onClick={() => navigate("/")}>
+         <div className="flex items-center cursor-pointer" onClick={() => navigate("/")}>
   <img
     src="/rlogo.jpg"
     alt="Sparkle n' Glee"
@@ -891,7 +1031,16 @@ useEffect(() => {
         </AnimatePresence>
       </header>
 
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+      <div className="h-16" aria-hidden="true" />
+
+      {featuredPromo && (
+        <FloatingPromoBar
+          promo={featuredPromo}
+          onAction={() => navigate("/book")}
+        />
+      )}
+
+      <section className="relative min-h-[calc(90vh-4rem)] flex items-center overflow-hidden">
         <HeroBackground />
 
         <motion.div
@@ -1157,10 +1306,15 @@ useEffect(() => {
       </section>
 
       <BeforeAfterGallery />
+      <div className="bg-gradient-to-b from-white via-white to-[#EBF3FF]/35">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-12">
+          <HeroVideoSpotlight />
+        </div>
+      </div>
 
       <section
         id="carpet-types"
-        className="py-20 sm:py-24 bg-gradient-to-b from-white to-[#EBF3FF]/40"
+        className="pt-8 pb-20 sm:pt-10 sm:pb-24 bg-gradient-to-b from-[#EBF3FF]/35 to-[#EBF3FF]/40"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -1423,7 +1577,8 @@ useEffect(() => {
               How It Works
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Get an instant estimate, confirm your booking, and track the entire cleaning process from your dashboard.
+              Get an instant estimate, confirm your booking, and track the entire cleaning process from your phone. From estimate to delivery, we make the entire process seamless.
+
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1525,7 +1680,7 @@ useEffect(() => {
 
       <footer className="border-t py-12 bg-gradient-to-b from-[#EBF3FF] to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
+<div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
 
 {/* BRAND */}
 <div>
@@ -1653,3 +1808,4 @@ useEffect(() => {
     </div>
   );
 }
+
