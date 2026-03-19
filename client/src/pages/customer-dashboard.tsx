@@ -13,6 +13,7 @@ import {
   CreditCard, AlertCircle, Gift, Shield, Star, XCircle
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { PromoFeatureCard } from "@/components/promo-display";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -29,7 +30,6 @@ function StatusTimeline({ status, pickupOption, returnOption }: { status: string
   const timelineSteps = ORDER_STATUSES.filter(s => {
     if (s.value === "AWAITING_PICKUP" && pickupOption !== "request_pickup") return false;
     if (s.value === "DELIVERED" && returnOption !== "request_delivery") return false;
-    if (s.value === "PENDING") return false;
     return true;
   });
   const currentIdx = timelineSteps.findIndex(s => s.value === effectiveStatus);
@@ -272,6 +272,7 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
   const { data: notifs = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
     enabled: open,
+    refetchInterval: open ? 30000 : false,
   });
 
   const markRead = useMutation({
@@ -283,6 +284,7 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
   });
 
   const [payOrder, setPayOrder] = useState<Order | null>(null);
+  const unreadNotifications = notifs.filter((notif) => !notif.isRead);
 
   const { data: orders = [] } = useQuery<(Order & { items?: OrderItem[] })[]>({
     queryKey: ["/api/orders/my"],
@@ -311,6 +313,15 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
             <DialogTitle className="flex items-center gap-2">
               <Bell className="w-5 h-5" />
               Notifications
+              {unreadNotifications.length > 0 && (
+                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                  </span>
+                  {unreadNotifications.length} new
+                </span>
+              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -380,8 +391,8 @@ function HomeTab({ user, orders }: { user: User; orders: (Order & { items?: Orde
   const [payOrder, setPayOrder] = useState<Order | null>(null);
 
   const latestOrder = orders[0];
-  const latestStatusInfo = latestOrder ? ORDER_STATUSES.find(s => s.value === latestOrder.status) : null;
-  const activeOrders = orders.filter(o => o.status !== "COMPLETED" && o.status !== "DELIVERED");
+  const latestStatusInfo = latestOrder && !latestOrder.isCancelled ? ORDER_STATUSES.find(s => s.value === latestOrder.status) : null;
+  const activeOrders = orders.filter(o => !o.isCancelled && o.status !== "COMPLETED" && o.status !== "DELIVERED");
 
   return (
     <div className="space-y-5">
@@ -509,33 +520,21 @@ function HomeTab({ user, orders }: { user: User; orders: (Order & { items?: Orde
 
       {promos.length > 0 && (
         <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.2 }}>
-          <h3 className="text-sm font-semibold mb-2">Special Offers</h3>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Special Offers</h3>
+              <p className="text-xs text-muted-foreground">Fresh deals ready to use on your next booking.</p>
+            </div>
+            <Gift className="w-4 h-4 text-primary shrink-0" />
+          </div>
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {promos.map((promo) => (
-              <Card
-                key={promo.id}
-                className="min-w-[200px] p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 flex-shrink-0"
-                data-testid={`card-promo-${promo.id}`}
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  {promo.isVipOnly && <Shield className="w-3.5 h-3.5 text-amber-500" />}
-                  <h4 className="font-semibold text-sm">{promo.name}</h4>
-                </div>
-                <p className="text-xs text-muted-foreground mb-3">{promo.description}</p>
-                {promo.couponCode && (
-                  <p className="text-xs font-mono bg-primary/10 px-2 py-1 rounded mb-2 w-fit">
-                    Code: {promo.couponCode}
-                  </p>
-                )}
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => navigate("/book")}
-                  data-testid={`button-use-promo-${promo.id}`}
-                >
-                  Book Now
-                </Button>
-              </Card>
+              <div key={promo.id} className="snap-start">
+                <PromoFeatureCard
+                  promo={promo}
+                  onAction={() => navigate("/book")}
+                />
+              </div>
             ))}
           </div>
         </motion.div>
@@ -568,8 +567,8 @@ function HomeTab({ user, orders }: { user: User; orders: (Order & { items?: Orde
 }
 
 function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) {
-  const activeOrders = orders.filter(o => o.status !== "COMPLETED" && o.status !== "DELIVERED");
-  const completedOrders = orders.filter(o => o.status === "COMPLETED" || o.status === "DELIVERED");
+  const activeOrders = orders.filter(o => !o.isCancelled && o.status !== "COMPLETED" && o.status !== "DELIVERED");
+  const completedOrders = orders.filter(o => o.isCancelled || o.status === "COMPLETED" || o.status === "DELIVERED");
   const [payOrder, setPayOrder] = useState<Order | null>(null);
   const [reviewOrder, setReviewOrder] = useState<(Order & { items?: OrderItem[] }) | null>(null);
   const { data: existingReviews = [] } = useQuery<Review[]>({ queryKey: ["/api/reviews/public"] });
@@ -648,7 +647,7 @@ function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) 
       {completedOrders.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" /> Completed ({completedOrders.length})
+            <CheckCircle2 className="w-4 h-4" /> Completed & Cancelled ({completedOrders.length})
           </h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {completedOrders.map(order => {
@@ -661,10 +660,19 @@ function OrdersTab({ orders }: { orders: (Order & { items?: OrderItem[] })[] }) 
                       <p className="text-xs text-muted-foreground">
                         {order.items?.[0]?.description || order.items?.[0]?.carpetType} &middot; {new Date(order.createdAt).toLocaleDateString("en-KE", { month: "short", day: "numeric" })}
                       </p>
+                      {order.isCancelled && (
+                        <p className="mt-1 text-[11px] font-medium text-rose-600">
+                          Cancelled{order.cancellationReason ? `: ${order.cancellationReason}` : ""}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right space-y-1">
                       <p className="text-sm font-semibold">KES {parseFloat(order.totalAmount).toLocaleString()}</p>
-                      {hasReview ? (
+                      {order.isCancelled ? (
+                        <Badge variant="secondary" className="bg-rose-100 text-[10px] text-rose-700">
+                          <X className="mr-1 h-2.5 w-2.5" /> Cancelled
+                        </Badge>
+                      ) : hasReview ? (
                         <Badge variant="secondary" className="text-[10px]">
                           <Star className="w-2.5 h-2.5 mr-1 fill-amber-400 text-amber-400" /> Reviewed
                         </Badge>
@@ -1007,15 +1015,40 @@ export default function CustomerDashboard() {
             </span>
           </div>
           <button
-            className="relative p-2 rounded-full hover:bg-accent transition-colors"
+            className="group relative rounded-full border border-transparent p-2 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]"
             onClick={() => setShowNotifs(true)}
             data-testid="button-notifications"
+            aria-label={
+              unreadCount > 0
+                ? `${unreadCount} unread notifications`
+                : "Open notifications"
+            }
+            title={
+              unreadCount > 0
+                ? `${unreadCount} new notification${unreadCount > 1 ? "s" : ""}`
+                : "Notifications"
+            }
           >
-            <Bell className="w-5 h-5 text-muted-foreground" />
+            <Bell className="w-5 h-5 text-muted-foreground transition-colors duration-200 group-hover:text-slate-900" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center" data-testid="badge-unread-count">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
+              <>
+                <span className="absolute right-0.5 top-0.5 flex h-2.5 w-2.5" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(255,255,255,0.95)]" />
+                </span>
+                <span className="absolute -right-2 -top-2 min-w-[1.3rem] rounded-full bg-gradient-to-r from-red-500 to-rose-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white shadow-[0_8px_20px_rgba(239,68,68,0.35)]" data-testid="badge-unread-count">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+                <span className="pointer-events-none absolute right-0 top-full z-20 hidden w-max min-w-[140px] translate-y-2 rounded-2xl border border-white/70 bg-white/95 px-3 py-2 text-left opacity-0 shadow-[0_16px_40px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-all duration-200 group-hover:translate-y-3 group-hover:opacity-100 group-focus-visible:translate-y-3 group-focus-visible:opacity-100 sm:block">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-red-500">
+                    Notifications
+                  </span>
+                  <span className="mt-1 flex items-center gap-2 text-xs font-medium text-slate-700">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    {unreadCount} new notification{unreadCount > 1 ? "s" : ""}
+                  </span>
+                </span>
+              </>
             )}
           </button>
         </div>
