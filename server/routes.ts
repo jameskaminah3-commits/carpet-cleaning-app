@@ -22,6 +22,26 @@ const otpLimiter = rateLimit({
 
 const isPromoForAllCustomers = (targetTag: string | null | undefined) =>
   !targetTag || targetTag === "all";
+const getPublicBaseUrl = (req: Request) => {
+  const forwardedProtoHeader = req.headers["x-forwarded-proto"];
+  const forwardedHostHeader = req.headers["x-forwarded-host"];
+  const forwardedProto = Array.isArray(forwardedProtoHeader) ? forwardedProtoHeader[0] : forwardedProtoHeader;
+  const forwardedHost = Array.isArray(forwardedHostHeader) ? forwardedHostHeader[0] : forwardedHostHeader;
+  const protocol = forwardedProto || req.protocol || "https";
+  const host = forwardedHost || req.get("host");
+
+  return process.env.PUBLIC_API_URL || (host ? `${protocol}://${host}` : "");
+};
+
+const resolvePublicAssetUrl = (req: Request, fileKey: string | null | undefined) => {
+  if (!fileKey) return fileKey;
+  if (/^https?:\/\//i.test(fileKey)) return fileKey;
+  if (!fileKey.startsWith("/uploads/")) return fileKey;
+
+  const baseUrl = getPublicBaseUrl(req);
+  return baseUrl ? `${baseUrl}${fileKey}` : fileKey;
+};
+
 declare module "express-serve-static-core" {
   interface Request {
     userId?: string;
@@ -904,8 +924,10 @@ app.get("/api/promotions/public", async (_req, res) => {
       const hasPending = pendingTxns.some(t => t.status === "pending");
       if (hasPending) return res.status(409).json({ message: "A payment is already being processed for this order. Please wait or try again shortly." });
 
-      const protocol = req.headers["x-forwarded-proto"] || "https";
-      const host = req.headers["x-forwarded-host"] || req.headers.host;
+      const forwardedProtoHeader = req.headers["x-forwarded-proto"];
+      const forwardedHostHeader = req.headers["x-forwarded-host"];
+      const protocol = Array.isArray(forwardedProtoHeader) ? forwardedProtoHeader[0] : forwardedProtoHeader || "https";
+      const host = Array.isArray(forwardedHostHeader) ? forwardedHostHeader[0] : forwardedHostHeader || req.headers.host;
       const callbackUrl = process.env.MPESA_CALLBACK_URL || `${protocol}://${host}/api/mpesa/stk-callback`;
 
       const stkResponse = await initiateSTKPush(
@@ -1106,7 +1128,10 @@ app.get("/api/promotions/public", async (_req, res) => {
 
   app.get("/api/media/public", async (_req, res) => {
     const publicMedia = await storage.getPublicMedia();
-    res.json(publicMedia);
+    res.json(publicMedia.map((item) => ({
+      ...item,
+      fileKey: resolvePublicAssetUrl(_req, item.fileKey),
+    })));
   });
 
   // Order photos upload
@@ -1180,7 +1205,10 @@ app.get("/api/promotions/public", async (_req, res) => {
   // Admin - Media/CMS
   app.get("/api/admin/media", authMiddleware, adminMiddleware, async (_req, res) => {
     const media = await storage.getMediaLibrary();
-    res.json(media);
+    res.json(media.map((item) => ({
+      ...item,
+      fileKey: resolvePublicAssetUrl(_req, item.fileKey),
+    })));
   });
 
   app.post("/api/admin/media", authMiddleware, adminMiddleware, async (req, res) => {
@@ -1255,26 +1283,35 @@ app.get("/api/promotions/public", async (_req, res) => {
         const filePath = path.join(uploadDir, filename);
 fs.writeFileSync(filePath, buffer);
 
-// Compress images
-if (contentType.startsWith("image/")) {
+        if (contentType.startsWith("image/")) {
+          const compressedFilename = `${path.parse(filename).name}.webp`;
+          const compressedPath = path.join(uploadDir, compressedFilename);
 
-  const compressedFilename = filename.replace(/\.(jpg|jpeg|png)$/i, ".webp");
-  const compressedPath = path.join(uploadDir, compressedFilename);
+          await sharp(buffer)
+            .rotate()
+            .resize({
+              width: 1600,
+              height: 1600,
+              fit: "inside",
+              withoutEnlargement: true,
+            })
+            .webp({ quality: 82 })
+            .toFile(compressedPath);
 
-  await sharp(filePath)
-    .resize({ width: 1600 })   // reduce large phone images
-    .webp({ quality: 80 })     // compress to modern format
-    .toFile(compressedPath);
+          if (fs.existsSync(filePath) && compressedPath !== filePath) {
+            fs.unlinkSync(filePath);
+          }
 
-  fs.unlinkSync(filePath); // delete original
+          const publicPath = `/uploads/${compressedFilename}`;
+          res.json({
+            fileKey: resolvePublicAssetUrl(req, publicPath),
+            filename: compressedFilename,
+          });
+          return;
+        }
 
-  return res.json({
-    fileKey: `/uploads/${compressedFilename}`,
-    filename: compressedFilename
-  });
-}
-
-res.json({ fileKey: `/uploads/${filename}`, filename });
+        const publicPath = `/uploads/${filename}`;
+        res.json({ fileKey: resolvePublicAssetUrl(req, publicPath), filename });
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
