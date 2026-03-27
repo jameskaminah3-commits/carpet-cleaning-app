@@ -3,6 +3,8 @@ import { Link } from "wouter";
 
 const PHONE_NUMBER = "0745016805";
 const WHATSAPP_LINK = "https://wa.me/254745016805";
+const GOOGLE_MAPS_LOCATION =
+  "https://www.google.com/maps/place/Sparkle+n+glee/@-1.2808542,36.6542875,794m/data=!3m2!1e3!4b1!4m6!3m5!1s0x182f1f4612b8505d:0xb0e4db7109779b40!8m2!3d-1.2808542!4d36.6542875!16s%2Fg%2F11n4vnrq27?entry=ttu&g_ep=EgoyMDI2MDMyMy4xIKXMDSoASAFQAw%3D%3D";
 
 export default function Footer() {
   return (
@@ -51,7 +53,14 @@ export default function Footer() {
               WhatsApp Chat
             </a>
 
-            <p>Serving Nairobi & Kiambu Areas</p>
+            <a
+              href={GOOGLE_MAPS_LOCATION}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 hover:text-primary transition"
+            >
+              Visit Our Location
+            </a>
 
           </div>
         </div>
