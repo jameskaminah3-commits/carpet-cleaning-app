@@ -96,6 +96,7 @@ export interface IStorage {
   createOrderPhoto(photo: InsertOrderPhoto): Promise<OrderPhoto>;
   getMediaLibrary(): Promise<Media[]>;
   getPublicMedia(): Promise<Media[]>;
+  getMedia(id: string): Promise<Media | undefined>;
   createMedia(media: InsertMedia): Promise<Media>;
   updateMedia(id: string, data: Partial<{ title: string; subtitle: string; isPublic: boolean; category: string }>): Promise<Media>;
   deleteMedia(id: string): Promise<void>;
@@ -148,16 +149,16 @@ async getUserByEmail(email: string): Promise<User | undefined> {
     await db.update(users).set({ otpCode: null, otpExpiry: null }).where(eq(users.id, id));
   }
 
-    async verifyUserEmail(id: string): Promise<void> {
+  async verifyUserEmail(id: string): Promise<void> {
     await db.update(users).set({ emailVerified: true }).where(eq(users.id, id));
   }
-  
+
   async updateUserPassword(id: string, passwordHash: string): Promise<void> {
   await db.update(users)
     .set({ passwordHash })
     .where(eq(users.id, id));
-  }
-  async updateUserLoginLock(
+}
+async updateUserLoginLock(
   userId: string,
   attempts: number,
   lockUntil: Date | null
@@ -494,6 +495,11 @@ async getUserByEmail(email: string): Promise<User | undefined> {
 
   async getMediaLibrary(): Promise<Media[]> {
     return db.select().from(mediaLibrary).orderBy(desc(mediaLibrary.uploadedAt));
+  }
+
+  async getMedia(id: string): Promise<Media | undefined> {
+    const [media] = await db.select().from(mediaLibrary).where(eq(mediaLibrary.id, id));
+    return media;
   }
 
   async createMedia(media: InsertMedia): Promise<Media> {

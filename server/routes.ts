@@ -18,6 +18,7 @@ import { randomUUID, randomInt } from "crypto";
 import sharp from "sharp";
 import { loginSchema, verifyOtpSchema, ORDER_STATUSES, orders, mpesaTransactions } from "@shared/schema";
 import { initiateSTKPush, extractCallbackMetadata, type STKCallbackBody } from "./mpesa";
+import { objectStorage } from "./storage/provider";
 
 const paramId = (req: Request) => req.params.id as string;
 const otpLimiter = rateLimit({
@@ -44,15 +45,27 @@ const getPublicBaseUrl = (req: Request) => {
 
 const resolvePublicAssetUrl = (req: Request, fileKey: string | null | undefined) => {
   if (!fileKey) return fileKey;
-  if (/^https?:\/\//i.test(fileKey)) return fileKey;
-  if (!fileKey.startsWith("/uploads/")) return fileKey;
+  const resolvedFileKey = objectStorage.getUrl(fileKey);
+  if (/^https?:\/\//i.test(resolvedFileKey)) return resolvedFileKey;
+  if (!resolvedFileKey.startsWith("/uploads/")) return resolvedFileKey;
 
   const baseUrl = getPublicBaseUrl(req);
-  return baseUrl ? `${baseUrl}${fileKey}` : fileKey;
+  return baseUrl ? `${baseUrl}${resolvedFileKey}` : resolvedFileKey;
 };
 
 const normalizeEmailList = (emails: Array<string | null | undefined>) =>
   Array.from(new Set(emails.map((email) => email?.trim()).filter((email): email is string => Boolean(email))));
+
+const readRequestBody = (req: Request) =>
+  new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+
+    req.on("data", (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
 
 const getAdminNotificationRecipients = async () => {
   const users = await storage.getAllUsers();
@@ -179,7 +192,7 @@ export async function registerRoutes(
       const expiry = new Date(Date.now() + 10 * 60 * 1000);
       await storage.updateUserOtp(user.id, otp, expiry);
 
-      res.json({ success: true, otp });
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
@@ -213,9 +226,9 @@ export async function registerRoutes(
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       await storage.createSession(user.id, token, expiresAt);
 
-     res.setHeader(
+res.setHeader(
   "Set-Cookie",
-  `session_token=${token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${7 * 24 * 60 * 60}`
+  `session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
 );
       res.json({ success: true, user: { id: user.id, name: user.name, role: user.role, phone: user.phone, email: user.email, tag: user.tag } });
     } catch (err: any) {
@@ -254,7 +267,7 @@ export async function registerRoutes(
     res.status(500).json({ message: err.message });
   }
 });
- app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   try {
     const { identifier, password } = req.body;
 
@@ -307,7 +320,7 @@ export async function registerRoutes(
 
 res.setHeader(
   "Set-Cookie",
-  `session_token=${token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${7 * 24 * 60 * 60}`
+  `session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
 );
 
     res.json({
@@ -324,8 +337,8 @@ res.setHeader(
   } catch (err:any) {
     res.status(500).json({ message: err.message });
   }
-}); 
-  app.post("/api/auth/register", otpLimiter, async (req, res) => {
+});
+app.post("/api/auth/register", otpLimiter, async (req, res) => {
   try {
     const { name, phone, email, password } = req.body;
 
@@ -364,7 +377,7 @@ res.setHeader(
 
     res.setHeader(
       "Set-Cookie",
-      `session_token=${token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${7 * 24 * 60 * 60}`
+      `session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
     );
 
     /* 🔹 GENERATE EMAIL OTP */
@@ -391,7 +404,7 @@ res.setHeader(
     res.status(500).json({ message: err.message });
   }
 });
-  app.post("/api/auth/forgot-password", otpLimiter, async (req, res) => {
+app.post("/api/auth/forgot-password", otpLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -413,7 +426,7 @@ res.setHeader(
     res.status(500).json({ message: err.message });
   }
 });
- app.post("/api/auth/reset-password", async (req, res) => {
+app.post("/api/auth/reset-password", async (req, res) => {
   try {
     const { email, otp, password } = req.body;
 
@@ -436,7 +449,7 @@ res.setHeader(
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
-}); 
+});
   app.get("/api/auth/me", authMiddleware, async (req, res) => {
     const user = await storage.getUser(req.userId!);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -469,7 +482,7 @@ res.setHeader(
     if (token) await storage.deleteSession(token);
    res.setHeader(
   "Set-Cookie",
-  "session_token=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0"
+  "session_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
 );
     res.json({ success: true });
   });
@@ -539,7 +552,7 @@ res.setHeader(
           if ((promo.minOrders ?? 0) > 0 && (user?.totalOrders ?? 0) < (promo.minOrders ?? 0)) {
             return res.status(400).json({ message: `You need at least ${promo.minOrders} orders to use this promotion` });
           }
-       if (!isPromoForAllCustomers(promo.targetTag) && user?.tag !== promo.targetTag) {
+          if (!isPromoForAllCustomers(promo.targetTag) && user?.tag !== promo.targetTag) {
             return res.status(400).json({ message: `This promotion is for ${promo.targetTag} customers only` });
           }
           validPromoId = promo.id;
@@ -724,7 +737,7 @@ res.setHeader(
         const user = await storage.getUser(req.userId!);
         if (!user || user.tag !== "VIP") return res.status(403).json({ message: "This coupon is for VIP customers only" });
       }
-            if (!isPromoForAllCustomers(promo.targetTag)) {
+      if (!isPromoForAllCustomers(promo.targetTag)) {
         const user = await storage.getUser(req.userId!);
         if (!user || user.tag !== promo.targetTag) {
           return res.status(403).json({ message: `This coupon is for ${promo.targetTag} customers only` });
@@ -1160,7 +1173,7 @@ res.setHeader(
   app.delete("/api/admin/promotions/:id", authMiddleware, adminMiddleware, async (req, res) => {
     await storage.deletePromotion(paramId(req));
     res.json({ success: true });
-   });
+  });
 app.get("/api/promotions/public", async (_req, res) => {
   const promos = await storage.getPromotions();
 
@@ -1176,6 +1189,7 @@ app.get("/api/promotions/public", async (_req, res) => {
 
   res.json(publicPromos);
 });
+
   // Notification routes
   app.get("/api/notifications", authMiddleware, async (req, res) => {
     try {
@@ -1298,7 +1312,7 @@ app.get("/api/promotions/public", async (_req, res) => {
         status: isSuccess ? "success" : "failed",
         resultCode: stkCallback.ResultCode,
         resultDesc: stkCallback.ResultDesc,
-        mpesaReceiptNumber: metadata.mpesaReceiptNumber || null,
+        mpesaReceiptNumber: metadata.mpesaReceiptNumber || undefined,
         rawCallback: callbackData,
       });
 
@@ -1370,7 +1384,7 @@ app.get("/api/promotions/public", async (_req, res) => {
 
   app.get("/api/payments/status/:checkoutRequestId", authMiddleware, async (req, res) => {
     try {
-      const { checkoutRequestId } = req.params;
+      const checkoutRequestId = req.params.checkoutRequestId as string;
       const transaction = await storage.getMpesaTransactionByCheckoutRequestId(checkoutRequestId);
       if (!transaction) return res.status(404).json({ message: "Transaction not found" });
 
@@ -1485,7 +1499,12 @@ app.get("/api/promotions/public", async (_req, res) => {
 
   app.get("/api/orders/:id/photos", authMiddleware, async (req, res) => {
     const photos = await storage.getOrderPhotos(paramId(req));
-    res.json(photos);
+    res.json(
+      photos.map((photo) => ({
+        ...photo,
+        fileKey: resolvePublicAssetUrl(req, photo.fileKey),
+      })),
+    );
   });
 
   // Admin - Extended routes
@@ -1565,6 +1584,10 @@ app.get("/api/promotions/public", async (_req, res) => {
 
   app.delete("/api/admin/media/:id", authMiddleware, adminMiddleware, async (req, res) => {
     try {
+      const media = await storage.getMedia(paramId(req));
+      if (!media) return res.status(404).json({ message: "Media not found" });
+
+      await objectStorage.delete(media.fileKey);
       await storage.deleteMedia(paramId(req));
       res.json({ success: true });
     } catch (err: any) {
@@ -1599,49 +1622,42 @@ app.get("/api/promotions/public", async (_req, res) => {
   // File upload endpoint for photos/media
   app.post("/api/upload", authMiddleware, async (req, res) => {
     try {
-      const chunks: Buffer[] = [];
-      req.on("data", (chunk) => chunks.push(chunk));
-      req.on("end", async () => {
-        const buffer = Buffer.concat(chunks);
-        const contentType = req.headers["content-type"] || "application/octet-stream";
-        const ext = contentType.includes("png") ? ".png" : contentType.includes("jpeg") || contentType.includes("jpg") ? ".jpg" : contentType.includes("webp") ? ".webp" : contentType.includes("mp4") ? ".mp4" : ".bin";
-        const filename = `upload_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
-        const fs = await import("fs");
-        const path = await import("path");
-        const uploadDir = path.join(process.cwd(), "uploads");
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-        const filePath = path.join(uploadDir, filename);
-fs.writeFileSync(filePath, buffer);
+      const buffer = await readRequestBody(req);
+      if (buffer.length === 0) return res.status(400).json({ message: "Upload body is empty" });
 
-        if (contentType.startsWith("image/")) {
-          const compressedFilename = `${path.parse(filename).name}.webp`;
-          const compressedPath = path.join(uploadDir, compressedFilename);
+      const contentTypeHeader = req.headers["content-type"];
+      const contentType = (Array.isArray(contentTypeHeader) ? contentTypeHeader[0] : contentTypeHeader || "application/octet-stream")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+      const folder = typeof req.query.folder === "string" && req.query.folder.trim() ? req.query.folder.trim() : "general";
 
-          await sharp(buffer)
-            .rotate()
-            .resize({
-              width: 1600,
-              height: 1600,
-              fit: "inside",
-              withoutEnlargement: true,
-            })
-            .webp({ quality: 82 })
-            .toFile(compressedPath);
+      if (contentType.startsWith("image/")) {
+        const optimizedBuffer = await sharp(buffer)
+          .rotate()
+          .resize({
+            width: 1600,
+            height: 1600,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .webp({ quality: 82 })
+          .toBuffer();
 
-          if (fs.existsSync(filePath) && compressedPath !== filePath) {
-            fs.unlinkSync(filePath);
-          }
+        const fileKey = await objectStorage.put(optimizedBuffer, "image/webp", folder);
+        res.json({
+          fileKey,
+          url: resolvePublicAssetUrl(req, fileKey),
+          filename: fileKey.split("/").pop(),
+        });
+        return;
+      }
 
-          const publicPath = `/uploads/${compressedFilename}`;
-          res.json({
-            fileKey: resolvePublicAssetUrl(req, publicPath),
-            filename: compressedFilename,
-          });
-          return;
-        }
-
-        const publicPath = `/uploads/${filename}`;
-        res.json({ fileKey: resolvePublicAssetUrl(req, publicPath), filename });
+      const fileKey = await objectStorage.put(buffer, contentType, folder);
+      res.json({
+        fileKey,
+        url: resolvePublicAssetUrl(req, fileKey),
+        filename: fileKey.split("/").pop(),
       });
     } catch (err: any) {
       res.status(500).json({ message: err.message });

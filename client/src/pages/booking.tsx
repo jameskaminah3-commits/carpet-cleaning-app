@@ -169,7 +169,7 @@ export default function BookingPage() {
       if (photos.length > 0 && order?.id) {
         for (const photo of photos) {
           try {
-            const uploadRes = await fetch("/api/upload", {
+            const uploadRes = await fetch("/api/upload?folder=orders", {
               method: "POST",
               headers: { "Content-Type": photo.type },
               body: photo,

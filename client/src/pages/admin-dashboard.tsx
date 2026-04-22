@@ -1237,7 +1237,7 @@ function MediaCMSTab() {
     if (!file) return;
     setUploading(true);
     try {
-      const res = await fetch("/api/upload", {
+      const res = await fetch("/api/upload?folder=media", {
         method: "POST",
         headers: { "Content-Type": file.type },
         body: file,
